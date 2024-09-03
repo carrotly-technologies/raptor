@@ -1,0 +1,7 @@
+# Node files
+dist/
+node_modules/
+
+# IDEs and editors
+.idea/
+.vscode/

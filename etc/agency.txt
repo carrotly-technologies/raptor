@@ -1,0 +1,2 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_phone,agency_fare_url
+246,Koleje Małopolskie,https://kolejemalopolskie.com.pl,Europe/Warsaw,12 307 17 14,https://kolejemalopolskie.com.pl
