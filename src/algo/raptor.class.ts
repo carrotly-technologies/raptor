@@ -1,13 +1,16 @@
 import { RouteId, Stop, StopId, StopTime, TripId } from '../gtfs/gtfs.types';
+import { secondsToTime } from '../utils/seconds-to-time.function';
 import { timeToSeconds } from '../utils/time-to-seconds.function';
 import { Journey, LoadArgs, PlanArgs, RouteIndex, StopIndex } from './raptor.types';
-import { secondsToTime } from '../utils/seconds-to-time.function';
 
 export class Raptor {
     private maxTransfers: number = 0;
 
     private routesIdx: Record<RouteId, RouteIndex> = {};
     private stopsIdx: Record<StopId, StopIndex> = {};
+
+    // temporary mock for tests
+    private footpaths: Record<StopId, Record<StopId, number>> = {};
 
     public load(args: LoadArgs): void {
         this.maxTransfers = args.maxTransfers;
@@ -60,26 +63,77 @@ export class Raptor {
                     };
                 });
             }
+        });
 
-            stopIds.forEach((stopId) => {
-                this.stopsIdx[stopId] ??= {
-                    stopId,
-                    routes: [],
-                    transfers: [],
-                };
+        // const stopIdsByParentStopId: Record<StopId, StopId[]> = args.stops.filter((stop) => stop['parent_station'] !== '').reduce<Record<StopId, StopId[]>>((acc, stop) => {
+        //     const childStopId = stop['stop_id'];
+        //     const parentStopId = stop['parent_station']
 
+        //     acc[parentStopId] ??= [];
+        //     acc[parentStopId].push(childStopId)
+
+        //     return acc;
+        // }, {})
+
+        // const transfersByStopId: Record<StopId, StopId[]> = args.stops.reduce<Record<StopId, StopId[]>>((acc, stop) => {
+        //     const stopId = stop['stop_id'];
+        //     const parentId = stop['parent_station'];
+
+        //     acc[stopId] ??= parentId === ''
+        //         ? stopIdsByParentStopId[stopId] || []
+        //         : [parentId, ...stopIdsByParentStopId[parentId].filter((a) => a !== stopId)];
+
+        //     return acc;
+        // }, {})
+
+        Object.entries(this.routesIdx).forEach(([routeId, route]) => {
+            route.stops.forEach(({ stopId }) => {
+                this.stopsIdx[stopId] ??= { stopId, routes: [], transfers: [] };
                 this.stopsIdx[stopId].routes.push({ routeId });
             });
         });
+
+        // Kraków Rondo Grunwaldzkie:
+        // - 959789 (PARENT)
+        // - 1014871 (END)
+        // - 1014872
+        // - 1536334 (START)
+
+        this.footpaths['1014871'] = { ['1536334']: timeToSeconds('00:05:00') };
+        this.footpaths['1536334'] = { ['1014871']: timeToSeconds('00:05:00') };
+        this.footpaths['80630'] = { ['1450499']: timeToSeconds('00:05:00') };
+        this.footpaths['1450499'] = { ['80630']: timeToSeconds('00:05:00') };
+        this.footpaths['80416'] = { ['824492']: timeToSeconds('00:05:00') };
+        this.footpaths['824492'] = { ['80416']: timeToSeconds('00:05:00') };
     }
 
-    public plan(args: PlanArgs): Journey {
+    private buildRoutesIdx(): Record<RouteId, RouteIndex> {
+        return {};
+    }
+
+    private buildStopsIdx(): Record<StopId, StopIndex> {
+        return {};
+    }
+
+    public plan(args: PlanArgs): Journey[] {
         const sourceStopId = args.sourceStopId;
         const targetStopId = args.targetStopId;
         const departureTime = args.departureTime;
 
         // Intermediate results
-        const results: Record<StopId, Record<number, { bestTripId: TripId, sourceStopId: StopId, targetStopId: StopId, arrivalTime: number, departureTime: number }>> = {};
+        const results: Record<
+            StopId,
+            Record<
+                number,
+                {
+                    bestTripId?: TripId;
+                    sourceStopId: StopId;
+                    targetStopId: StopId;
+                    arrivalTime?: number;
+                    departureTime?: number;
+                }
+            >
+        > = {};
 
         // Initialization of the algorithm
         const knownArrivals: Array<Record<string, number>> = [];
@@ -98,7 +152,7 @@ export class Raptor {
         knownArrivals[0][sourceStopId] = timeToSeconds(departureTime);
         markedStopIds.add(sourceStopId);
 
-        for (let k = 1; k < this.maxTransfers && markedStopIds.size > 0; k++) {
+        for (let k = 1; /* k < this.maxTransfers && */ markedStopIds.size > 0; k++) {
             // Accumulate routes serving marked stops from previous round
             const queue: Record<RouteId, StopId> = {};
 
@@ -117,6 +171,7 @@ export class Raptor {
                 markedStopIds.delete(markedStopId);
             }
 
+            // Travers each route
             for (const routeId in queue) {
                 let bestTripId: TripId | null = null;
                 let boardingId: StopId | null = null;
@@ -125,45 +180,90 @@ export class Raptor {
                 const queueStopIdx = route.stops.findIndex((stop) => stop.stopId === queue[routeId]);
 
                 const stops = route.stops.slice(queueStopIdx);
+
                 for (const stop of stops) {
                     const stopId = stop.stopId;
+                    const arrivalTime = this.getArrivalTime(routeId, bestTripId, stopId);
 
                     // Can the label be improved in this round?
                     // Includes local and target pruning
                     // I have no clue what "t != ⊥" means in this case, so I will ignore it for now
-                    if (bestTripId && this.getArrivalTime(routeId, bestTripId, stopId) < Math.min(bestArrivals[stopId], bestArrivals[targetStopId])) {
-                        knownArrivals[k][stopId] = this.getArrivalTime(routeId, bestTripId, stopId);
-                        bestArrivals[stopId] = this.getArrivalTime(routeId, bestTripId, stopId);
+                    if (bestTripId && arrivalTime < Math.min(bestArrivals[stopId], bestArrivals[targetStopId])) {
+                        const departureTime = this.getDepartureTime(routeId, bestTripId, boardingId);
+                        if (arrivalTime < departureTime) {
+                            // @fixme!
+                            // This is some temporary workaround because for some reason the actual
+                            // implementation sometimes returns arrivalTime < departureTime
+                            //
+                            // Example, from 1014894 to 1450499 after 11:45:00:
+                            // 17:15 - 19:12 bus A21 Nowy Sącz MDA, Koleje Małopolskie, Nowy Targ D.A. → Nowy Sącz MDA
+                            // 20:05 - 21:52 bus A22 Tarnów Dworzec Autobusowy, Koleje Małopolskie, Nowy Sącz MDA → Tarnów ul. Krakowska - Przemysłowa
+                            // **22:10 - 21:30** bus A29 Tarnów Marszałka, Koleje Małopolskie, Tarnów ul. Krakowska - Przemysłowa → Tarnów Marszałka
+                            // 21:30 - 21:37 bus A29 Tarnów Marszałka, Koleje Małopolskie, Tarnów Marszałka → Tarnów Sikorskiego
+                            // 21:37 - 21:39 bus A39 Tarnów Dworzec Autobusowy, Koleje Małopolskie, Tarnów Sikorskiego → Tarnów Dworzec Autobusowy
+
+                            continue;
+                        }
+
+                        knownArrivals[k][stopId] = arrivalTime;
+                        bestArrivals[stopId] = arrivalTime;
                         markedStopIds.add(stopId);
 
                         results[stopId] ??= {};
-                        results[stopId][k] = { 
-                            bestTripId, 
-                            sourceStopId: boardingId, 
+                        results[stopId][k] = {
+                            bestTripId,
+                            sourceStopId: boardingId,
                             targetStopId: stopId,
-                            departureTime: this.getDepartureTime(routeId, bestTripId, boardingId), 
-                            arrivalTime: this.getArrivalTime(routeId, bestTripId, stopId),
+                            departureTime: departureTime,
+                            arrivalTime: arrivalTime,
                         };
                     }
 
                     // Can we catch an earlier trip at this stop?
-                    else if (!bestTripId || knownArrivals[k-1][stop.stopId] <= this.getDepartureTime(routeId, bestTripId, stopId)) {
-                        bestTripId = this.getEarliestTripId(routeId, stopId, knownArrivals[k-1][stop.stopId]);
+                    if (
+                        !bestTripId ||
+                        knownArrivals[k - 1][stop.stopId] <= this.getDepartureTime(routeId, bestTripId, stopId)
+                    ) {
+                        bestTripId = this.getEarliestTripId(routeId, stopId, knownArrivals[k - 1][stop.stopId]);
                         boardingId = stopId;
-                    }  
+                    }
                 }
             }
 
-            // ignore footpaths for now
+            // Look at footpaths
+            for (const markedStopId of new Set(markedStopIds)) {
+                for (const targetStopId in this.footpaths[markedStopId] || {}) {
+                    const walkingTime = this.footpaths[markedStopId][targetStopId];
+                    const arrivalTime = Math.min(
+                        knownArrivals[k][targetStopId],
+                        knownArrivals[k][markedStopId] + walkingTime,
+                    );
+
+                    if (arrivalTime < bestArrivals[targetStopId]) {
+                        knownArrivals[k][targetStopId] = arrivalTime;
+                        bestArrivals[targetStopId] = arrivalTime;
+
+                        markedStopIds.add(targetStopId);
+
+                        results[targetStopId] ??= {};
+                        results[targetStopId][k] = {
+                            sourceStopId: markedStopId,
+                            targetStopId: targetStopId,
+                            departureTime: arrivalTime - walkingTime,
+                            arrivalTime: arrivalTime,
+                        };
+                    }
+                }
+            }
         }
 
         return this.transformToJourney(results, targetStopId);
     }
 
+    // @todo: optimize search time by using index
     private isStopBefore(routeId: string, leftStopId: string, rightStopId: string): boolean {
         const route = this.routesIdx[routeId];
 
-        // Eventually, we should have index for this to avoid O(n) search
         const leftStopIdx = route.stops.findIndex((stop) => stop.stopId === leftStopId);
         const rightStopIdx = route.stops.findIndex((stop) => stop.stopId === rightStopId);
 
@@ -171,6 +271,7 @@ export class Raptor {
     }
 
     // Returns arrival time of a trip at a stop
+    // @todo: optimize search time by using index
     private getArrivalTime(routeId: string, tripId: string, stopId: string): number | null {
         const route = this.routesIdx[routeId];
 
@@ -184,6 +285,7 @@ export class Raptor {
     }
 
     // Returns departure time of a trip at a stop
+    // @todo: optimize search time by using index
     private getDepartureTime(routeId: string, tripId: string, stopId: string): number | null {
         const route = this.routesIdx[routeId];
 
@@ -203,38 +305,73 @@ export class Raptor {
         const stops = route.stops;
         const stopIdx = stops.findIndex((stop) => stop.stopId === stopId);
 
-        const trip = route.trips.find((trip) => trip.stopTimes[stopIdx].arrivalTime >= arrivalTime);
+        const trips = route.trips.filter((trip) => trip.stopTimes[stopIdx].arrivalTime >= arrivalTime);
+        const trip = trips.reduce(
+            (best, current) =>
+                current.stopTimes[stopIdx].departureTime < best.stopTimes[stopIdx].departureTime ? current : best,
+            trips[0],
+        );
+
         if (!trip) return null;
 
         return trip.tripId;
     }
 
     // Transforms the intermediate results into a journey interface
-    private transformToJourney(results: Record<StopId, Record<number, { bestTripId: TripId, sourceStopId: StopId, targetStopId: StopId, arrivalTime: number, departureTime: number }>>, targetStopId: StopId): Journey {
-        const journey: Journey = { segments: [] };
+    private transformToJourney(
+        results: Record<
+            StopId,
+            Record<
+                number,
+                {
+                    bestTripId?: TripId;
+                    sourceStopId: StopId;
+                    targetStopId: StopId;
+                    arrivalTime?: number;
+                    departureTime?: number;
+                }
+            >
+        >,
+        targetStopId: StopId,
+    ): Journey[] {
+        const journeys: Journey[] = [];
 
-        let currentStopId = targetStopId;
+        for (const k of Object.keys(results[targetStopId])) {
+            const segments: Journey['segments'] = [];
 
-        while (true) {
-            const targetResults = results[currentStopId];
-            if (!targetResults) break;
-            
-            const minTransfers = Math.min(...Object.keys(targetResults).map((t) => Number(t)));
-            const targetResult = targetResults[minTransfers];
+            let currentStopId = targetStopId;
+            for (let i = parseInt(k, 10); i > 0; i--) {
+                const transit = results[currentStopId][i];
 
-            journey.segments.push({
-                tripId: targetResult.bestTripId,
-                sourceStopId: targetResult.sourceStopId,
-                targetStopId: targetResult.targetStopId,
-                departureTime: secondsToTime(targetResult.departureTime),
-                arrivalTime: secondsToTime(targetResult.arrivalTime),
-            });
+                segments.push({
+                    tripId: transit.bestTripId,
+                    sourceStopId: transit.sourceStopId,
+                    targetStopId: transit.targetStopId,
+                    departureTime: secondsToTime(transit.departureTime),
+                    arrivalTime: secondsToTime(transit.arrivalTime),
+                });
 
-            currentStopId = targetResult.sourceStopId;
+                currentStopId = transit.sourceStopId;
+
+                if (!transit.bestTripId) {
+                    const transit = results[currentStopId][i];
+
+                    segments.push({
+                        tripId: transit.bestTripId,
+                        sourceStopId: transit.sourceStopId,
+                        targetStopId: transit.targetStopId,
+                        departureTime: secondsToTime(transit.departureTime),
+                        arrivalTime: secondsToTime(transit.arrivalTime),
+                    });
+
+                    currentStopId = transit.sourceStopId;
+                }
+            }
+
+            segments.reverse();
+            journeys.push({ segments });
         }
 
-        journey.segments.reverse();
-
-        return journey;
+        return journeys;
     }
 }

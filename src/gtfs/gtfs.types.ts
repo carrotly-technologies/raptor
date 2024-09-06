@@ -3,6 +3,7 @@ export type TripId = string;
 export type RouteId = string;
 export type ServiceId = string;
 
+export type Agency = Record<string, string>;
 export type Stop = Record<string, string>;
 export type Calendar = Record<string, string>;
 export type CalendarDate = Record<string, string>;
@@ -15,6 +16,7 @@ export type StopTime = Record<string, string>;
 export type Time = `${string}:${string}:${string}`;
 
 export interface GTFS {
+    agency: Agency[];
     routes: Route[];
     stops: Stop[];
     trips: Trip[];

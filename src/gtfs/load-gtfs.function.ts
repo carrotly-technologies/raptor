@@ -6,6 +6,7 @@ import { parseCSV } from './parse-csv.function';
 
 export const loadGTFS = (dirpath: string): GTFS => {
     const files = [
+        { key: 'agency', filename: 'agency.txt' },
         { key: 'routes', filename: 'routes.txt' },
         { key: 'stops', filename: 'stops.txt' },
         { key: 'trips', filename: 'trips.txt' },

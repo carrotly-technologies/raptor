@@ -1,2 +1,3 @@
-agency_id,agency_name,agency_url,agency_timezone,agency_phone,agency_fare_url
-246,Koleje Małopolskie,https://kolejemalopolskie.com.pl,Europe/Warsaw,12 307 17 14,https://kolejemalopolskie.com.pl
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone,agency_fare_url,agency_email
+1,Koleje Małopolskie sp. z o.o.,https://kolejemalopolskie.com.pl/,Europe/Warsaw,pl,+48122888200,https://kolejemalopolskie.com.pl/pl/dla-pasazera/oferty-taryfy-przepisy/oferty-taryfowe-kolejowe,sekretariat@kolejemalopolskie.com.pl
+246,Koleje Małopolskie,https://kolejemalopolskie.com.pl,Europe/Warsaw,,12 307 17 14,https://kolejemalopolskie.com.pl,
