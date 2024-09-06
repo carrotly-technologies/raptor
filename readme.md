@@ -94,3 +94,10 @@ if no stops are marked then
 ```
 
 ---
+
+// this.footpaths['1014871'] = { ['1536334']: timeToSeconds('00:05:00') };
+// this.footpaths['1536334'] = { ['1014871']: timeToSeconds('00:05:00') };
+// this.footpaths['80630'] = { ['1450499']: timeToSeconds('00:05:00') };
+// this.footpaths['1450499'] = { ['80630']: timeToSeconds('00:05:00') };
+// this.footpaths['80416'] = { ['824492']: timeToSeconds('00:05:00') };
+// this.footpaths['824492'] = { ['80416']: timeToSeconds('00:05:00') };

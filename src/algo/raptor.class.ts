@@ -1,7 +1,9 @@
-import { RouteId, Stop, StopId, StopTime, TripId } from '../gtfs/gtfs.types';
-import { secondsToTime } from '../utils/seconds-to-time.function';
-import { timeToSeconds } from '../utils/time-to-seconds.function';
+import { calculateHaversineDistance } from '../utils/calculate-haversine-distance.function';
+import { RouteId, Service, ServiceId, Stop, StopId, StopTime, TripId } from '../gtfs/gtfs.types';
+import { numberToTime } from '../utils/number-to-time.function';
+import { timeToNumber } from '../utils/time-to-number.function';
 import { Journey, LoadArgs, PlanArgs, RouteIndex, StopIndex } from './raptor.types';
+import { dateToNumber } from '../utils/date-to-number';
 
 export class Raptor {
     private maxTransfers: number = 0;
@@ -30,6 +32,25 @@ export class Raptor {
             return acc;
         }, {});
 
+        const calendarByServiceId = args.calendar.reduce<Record<ServiceId, Service>>((acc, calendar) => {
+            acc[calendar.service_id] = calendar;
+            return acc;
+        }, {});
+
+        const [includeDatesByServiceId, excludeDatesByServiceId] = args.calendarDates.reduce<Record<ServiceId, number[]>[]>((acc, calendarDate) => {
+            const serviceId = calendarDate.service_id;
+
+            if (calendarDate.exception_type === '1') {
+                acc[0][serviceId] ??= [];
+                acc[0][serviceId].push(Number(calendarDate.date));
+            } else {
+                acc[1][serviceId] ??= [];
+                acc[1][serviceId].push(Number(calendarDate.date));
+            }
+
+            return acc;
+        }, [{}, {}]);
+
         args.trips.forEach((trip) => {
             const stopTimes = stopTimesByTripId[trip['trip_id']] || [];
             if (stopTimes.length === 0) return;
@@ -43,12 +64,28 @@ export class Raptor {
                 stops: [],
             };
 
+            const calendar = calendarByServiceId[trip['service_id']];
+
+
             this.routesIdx[routeId].trips.push({
                 tripId: trip['trip_id'],
+                schedule: {
+                    startDate: calendar ? dateToNumber(calendar.start_date) : 0,
+                    endDate: calendar ? dateToNumber(calendar.end_date) : Number.MAX_SAFE_INTEGER,
+                    monday: calendar?.monday === '1',
+                    tuesday: calendar?.tuesday === '1',
+                    wednesday: calendar?.wednesday === '1',
+                    thursday: calendar?.thursday === '1',
+                    friday: calendar?.friday === '1',
+                    saturday: calendar?.saturday === '1',
+                    sunday: calendar?.sunday === '1',
+                    exclude: excludeDatesByServiceId[trip['service_id']] || [],
+                    include: includeDatesByServiceId[trip['service_id']] || []
+                },
                 stopTimes: stopTimes.map((stopTime) => ({
                     stopId: stopTime['stop_id'],
-                    arrivalTime: timeToSeconds(stopTime['arrival_time']),
-                    departureTime: timeToSeconds(stopTime['departure_time']),
+                    arrivalTime: timeToNumber(stopTime['arrival_time']),
+                    departureTime: timeToNumber(stopTime['departure_time']),
                 })),
             });
 
@@ -65,54 +102,36 @@ export class Raptor {
             }
         });
 
-        // const stopIdsByParentStopId: Record<StopId, StopId[]> = args.stops.filter((stop) => stop['parent_station'] !== '').reduce<Record<StopId, StopId[]>>((acc, stop) => {
-        //     const childStopId = stop['stop_id'];
-        //     const parentStopId = stop['parent_station']
-
-        //     acc[parentStopId] ??= [];
-        //     acc[parentStopId].push(childStopId)
-
-        //     return acc;
-        // }, {})
-
-        // const transfersByStopId: Record<StopId, StopId[]> = args.stops.reduce<Record<StopId, StopId[]>>((acc, stop) => {
-        //     const stopId = stop['stop_id'];
-        //     const parentId = stop['parent_station'];
-
-        //     acc[stopId] ??= parentId === ''
-        //         ? stopIdsByParentStopId[stopId] || []
-        //         : [parentId, ...stopIdsByParentStopId[parentId].filter((a) => a !== stopId)];
-
-        //     return acc;
-        // }, {})
-
         Object.entries(this.routesIdx).forEach(([routeId, route]) => {
             route.stops.forEach(({ stopId }) => {
-                this.stopsIdx[stopId] ??= { stopId, routes: [], transfers: [] };
+                this.stopsIdx[stopId] ??= { stopId, routes: [] };
                 this.stopsIdx[stopId].routes.push({ routeId });
             });
         });
 
-        // Kraków Rondo Grunwaldzkie:
-        // - 959789 (PARENT)
-        // - 1014871 (END)
-        // - 1014872
-        // - 1536334 (START)
+        const walkingSpeed = 1.33; // m/s
+        const maxWalkingTime = 5 * 60;
+        const maxWalkingDistance = maxWalkingTime * walkingSpeed;
 
-        this.footpaths['1014871'] = { ['1536334']: timeToSeconds('00:05:00') };
-        this.footpaths['1536334'] = { ['1014871']: timeToSeconds('00:05:00') };
-        this.footpaths['80630'] = { ['1450499']: timeToSeconds('00:05:00') };
-        this.footpaths['1450499'] = { ['80630']: timeToSeconds('00:05:00') };
-        this.footpaths['80416'] = { ['824492']: timeToSeconds('00:05:00') };
-        this.footpaths['824492'] = { ['80416']: timeToSeconds('00:05:00') };
-    }
+        args.stops.forEach((sourceStop) => {
+            this.footpaths[sourceStop['stop_id']] ??= {};
 
-    private buildRoutesIdx(): Record<RouteId, RouteIndex> {
-        return {};
-    }
+            args.stops.forEach((targetStop) => {
+                if (sourceStop['stop_id'] === targetStop['stop_id']) return;
 
-    private buildStopsIdx(): Record<StopId, StopIndex> {
-        return {};
+                const walkingDistance = calculateHaversineDistance(
+                    Number(sourceStop['stop_lat']),
+                    Number(sourceStop['stop_lon']),
+                    Number(targetStop['stop_lat']),
+                    Number(targetStop['stop_lon']),
+                );
+
+                if (walkingDistance > maxWalkingDistance) return;
+
+                const walkingTime = Math.ceil(walkingDistance / walkingSpeed);
+                this.footpaths[sourceStop['stop_id']][targetStop['stop_id']] = walkingTime;
+            });
+        });
     }
 
     public plan(args: PlanArgs): Journey[] {
@@ -131,6 +150,7 @@ export class Raptor {
                     targetStopId: StopId;
                     arrivalTime?: number;
                     departureTime?: number;
+                    footpath?: any;
                 }
             >
         > = {};
@@ -149,7 +169,7 @@ export class Raptor {
             bestArrivals[stopId] = Number.MAX_SAFE_INTEGER;
         }
 
-        knownArrivals[0][sourceStopId] = timeToSeconds(departureTime);
+        knownArrivals[0][sourceStopId] = timeToNumber(departureTime);
         markedStopIds.add(sourceStopId);
 
         for (let k = 1; /* k < this.maxTransfers && */ markedStopIds.size > 0; k++) {
@@ -190,21 +210,7 @@ export class Raptor {
                     // I have no clue what "t != ⊥" means in this case, so I will ignore it for now
                     if (bestTripId && arrivalTime < Math.min(bestArrivals[stopId], bestArrivals[targetStopId])) {
                         const departureTime = this.getDepartureTime(routeId, bestTripId, boardingId);
-                        if (arrivalTime < departureTime) {
-                            // @fixme!
-                            // This is some temporary workaround because for some reason the actual
-                            // implementation sometimes returns arrivalTime < departureTime
-                            //
-                            // Example, from 1014894 to 1450499 after 11:45:00:
-                            // 17:15 - 19:12 bus A21 Nowy Sącz MDA, Koleje Małopolskie, Nowy Targ D.A. → Nowy Sącz MDA
-                            // 20:05 - 21:52 bus A22 Tarnów Dworzec Autobusowy, Koleje Małopolskie, Nowy Sącz MDA → Tarnów ul. Krakowska - Przemysłowa
-                            // **22:10 - 21:30** bus A29 Tarnów Marszałka, Koleje Małopolskie, Tarnów ul. Krakowska - Przemysłowa → Tarnów Marszałka
-                            // 21:30 - 21:37 bus A29 Tarnów Marszałka, Koleje Małopolskie, Tarnów Marszałka → Tarnów Sikorskiego
-                            // 21:37 - 21:39 bus A39 Tarnów Dworzec Autobusowy, Koleje Małopolskie, Tarnów Sikorskiego → Tarnów Dworzec Autobusowy
-
-                            continue;
-                        }
-
+                       
                         knownArrivals[k][stopId] = arrivalTime;
                         bestArrivals[stopId] = arrivalTime;
                         markedStopIds.add(stopId);
@@ -305,7 +311,13 @@ export class Raptor {
         const stops = route.stops;
         const stopIdx = stops.findIndex((stop) => stop.stopId === stopId);
 
-        const trips = route.trips.filter((trip) => trip.stopTimes[stopIdx].arrivalTime >= arrivalTime);
+        const dateNumber = Number(new Date().toISOString().split('T')[0].replace(/-/g, ''));
+        const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+
+        const trips = route.trips
+            .filter((trip) => trip.schedule.include.includes(dateNumber) || (!trip.schedule.exclude.includes(dateNumber) && trip.schedule.startDate <= dateNumber && trip.schedule.endDate >= dateNumber && trip.schedule[dayName]))
+            .filter((trip) => trip.stopTimes[stopIdx].arrivalTime >= arrivalTime)
+        
         const trip = trips.reduce(
             (best, current) =>
                 current.stopTimes[stopIdx].departureTime < best.stopTimes[stopIdx].departureTime ? current : best,
@@ -347,8 +359,8 @@ export class Raptor {
                     tripId: transit.bestTripId,
                     sourceStopId: transit.sourceStopId,
                     targetStopId: transit.targetStopId,
-                    departureTime: secondsToTime(transit.departureTime),
-                    arrivalTime: secondsToTime(transit.arrivalTime),
+                    departureTime: numberToTime(transit.departureTime),
+                    arrivalTime: numberToTime(transit.arrivalTime),
                 });
 
                 currentStopId = transit.sourceStopId;
@@ -360,8 +372,8 @@ export class Raptor {
                         tripId: transit.bestTripId,
                         sourceStopId: transit.sourceStopId,
                         targetStopId: transit.targetStopId,
-                        departureTime: secondsToTime(transit.departureTime),
-                        arrivalTime: secondsToTime(transit.arrivalTime),
+                        departureTime: numberToTime(transit.departureTime),
+                        arrivalTime: numberToTime(transit.arrivalTime),
                     });
 
                     currentStopId = transit.sourceStopId;

@@ -2,7 +2,7 @@ import { Time } from '../gtfs/gtfs.types';
 
 const cache: Record<number, Time> = {};
 
-export const secondsToTime = (num: number): Time => {
+export const numberToTime = (num: number): Time => {
     if (cache[num]) return cache[num];
 
     const hours = Array(1)

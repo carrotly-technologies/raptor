@@ -49,7 +49,7 @@ const bootstrap = () => {
                 const agencyName = agency['agency_name'];
 
                 console.log(
-                    `${departureTime.slice(0, 5)} - ${arrivalTime.slice(0, 5)} ${routeType}\t${routeLongName || routeShortName}${tripHeadsign ? ' ' + tripHeadsign : ''}, ${agencyName}, ${sourceStopName} → ${targetStopName}`,
+                    `${departureTime.slice(0, 5)} - ${arrivalTime.slice(0, 5)} ${routeType}\t${routeLongName || routeShortName}${tripHeadsign ? ' ' + tripHeadsign : ''}, ${agencyName}, ${sourceStopName} → ${targetStopName} (${tripId})`,
                 );
                 // console.log(`Take trip ${tripId} from stop ${sourceStopId} at ${departureTime} to stop ${targetStopId} at ${arrivalTime}`);
             } else {

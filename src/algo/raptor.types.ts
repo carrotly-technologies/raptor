@@ -33,6 +33,19 @@ export type RouteIndex = {
     routeId: RouteId;
     trips: {
         tripId: TripId;
+        schedule: {
+            startDate: number;
+            endDate: number;
+            monday: boolean;
+            tuesday: boolean;
+            wednesday: boolean;
+            thursday: boolean;
+            friday: boolean;
+            saturday: boolean;
+            sunday: boolean;
+            exclude: number[];
+            include: number[];
+        }
         stopTimes: {
             stopId: StopId;
             arrivalTime: number;
@@ -50,10 +63,6 @@ export type StopIndex = {
     stopId: StopId;
     routes: {
         routeId: RouteId;
-    }[];
-    transfers: {
-        fromStopId: StopId;
-        toStopId: StopId;
     }[];
 };
 

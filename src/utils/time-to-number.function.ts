@@ -1,6 +1,6 @@
 const cache: Record<string, number> = {};
 
-export const timeToSeconds = (time: string): number => {
+export const timeToNumber = (time: string): number => {
     if (cache[time]) return cache[time];
 
     const [hours, minutes, seconds] = time.split(':').map(Number);
