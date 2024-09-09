@@ -6,11 +6,12 @@ import {
     Stop,
     StopId,
     StopTime,
-    Time,
     Transfer,
     Trip,
     TripId,
 } from '../gtfs/gtfs.types';
+import { RaptorDate } from '../utils/raptor-date.class';
+import { RaptorTime } from '../utils/raptor-time.class';
 
 export interface LoadArgs {
     stops: Stop[];
@@ -21,19 +22,37 @@ export interface LoadArgs {
     calendarDates: CalendarDate[];
     transfers: Transfer[];
     maxTransfers?: number;
+    maxDays?: number;
+    maxWalkingTime?: number;
+    walkingSpeed?: number;
 }
 
 export interface PlanArgs {
     sourceStopId: StopId;
     targetStopId: StopId;
-    departureTime: Time;
+    date: RaptorDate | string | number;
+    time: RaptorTime | string | number;
 }
 
 export type RouteIndex = {
     routeId: RouteId;
+    // --- temporary: start ---
+    tripByTripId: Record<
+        TripId,
+        {
+            stopTimeByStopId: Record<
+                StopId,
+                {
+                    arrivalTime: RaptorTime;
+                    departureTime: RaptorTime;
+                }
+            >;
+        }
+    >;
+    // --- temporary: end ---
     trips: {
         tripId: TripId;
-        schedule: {
+        service: {
             startDate: number;
             endDate: number;
             monday: boolean;
@@ -45,11 +64,11 @@ export type RouteIndex = {
             sunday: boolean;
             exclude: number[];
             include: number[];
-        }
+        };
         stopTimes: {
             stopId: StopId;
-            arrivalTime: number;
-            departureTime: number;
+            arrivalTime: RaptorTime;
+            departureTime: RaptorTime;
         }[];
     }[];
     stops: {
@@ -61,17 +80,29 @@ export type RouteIndex = {
 
 export type StopIndex = {
     stopId: StopId;
-    routes: {
-        routeId: RouteId;
-    }[];
+    routes: { routeId: RouteId }[];
 };
+
+export type ConnectionByStopId = Record<
+    StopId,
+    Record<
+        number,
+        {
+            bestTripId?: TripId;
+            sourceStopId: StopId;
+            targetStopId: StopId;
+            arrivalTime?: number;
+            departureTime?: number;
+        }
+    >
+>;
 
 export interface Journey {
     segments: {
         tripId?: TripId;
         sourceStopId: StopId;
         targetStopId: StopId;
-        arrivalTime?: Time;
-        departureTime?: Time;
+        arrivalTime: number;
+        departureTime: number;
     }[];
 }

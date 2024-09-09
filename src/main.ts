@@ -1,23 +1,12 @@
 import * as path from 'path';
 import { Raptor } from './algo/raptor.class';
+import { Journey } from './algo/raptor.types';
+import { GTFS } from './gtfs/gtfs.types';
 import { loadGTFS } from './gtfs/load-gtfs.function';
+import { RaptorDate } from './utils/raptor-date.class';
+import { RaptorTime } from './utils/raptor-time.class';
 
-const bootstrap = () => {
-    const gtfs = loadGTFS(path.join(__dirname, '..', 'etc'));
-    const raptor = new Raptor();
-
-    console.time('Loading phase');
-    raptor.load({ ...gtfs, maxTransfers: 100 });
-    console.timeEnd('Loading phase');
-
-    console.time('Planning phase');
-    const journeys = raptor.plan({
-        sourceStopId: '1014894',
-        targetStopId: '1606200',
-        departureTime: '11:45:00',
-    });
-    console.timeEnd('Planning phase');
-
+const print = (gtfs: GTFS, journeys: Journey[]) => {
     console.log('@carrotly/raptor');
 
     journeys.forEach((journey, i) => {
@@ -27,8 +16,8 @@ const bootstrap = () => {
             const tripId = segment.tripId;
             const sourceStopId = segment.sourceStopId;
             const targetStopId = segment.targetStopId;
-            const departureTime = segment.departureTime;
-            const arrivalTime = segment.arrivalTime;
+            const departureTime = RaptorTime.fromNumber(segment.departureTime % 86400).toString();
+            const arrivalTime = RaptorTime.fromNumber(segment.arrivalTime % 86400).toString();
 
             const sourceStop = gtfs.stops.find((stop) => stop['stop_id'] === sourceStopId);
             const targetStop = gtfs.stops.find((stop) => stop['stop_id'] === targetStopId);
@@ -51,15 +40,33 @@ const bootstrap = () => {
                 console.log(
                     `${departureTime.slice(0, 5)} - ${arrivalTime.slice(0, 5)} ${routeType}\t${routeLongName || routeShortName}${tripHeadsign ? ' ' + tripHeadsign : ''}, ${agencyName}, ${sourceStopName} → ${targetStopName} (${tripId})`,
                 );
-                // console.log(`Take trip ${tripId} from stop ${sourceStopId} at ${departureTime} to stop ${targetStopId} at ${arrivalTime}`);
             } else {
                 console.log(
                     `${departureTime.slice(0, 5)} - ${arrivalTime.slice(0, 5)} foot\t${sourceStopName} → ${targetStopName}`,
                 );
-                // console.log(`Walk from stop ${sourceStopId} to stop ${targetStopId} in ${secondsToTime(timeToSeconds(arrivalTime) - timeToSeconds(departureTime))}`)
             }
         });
     });
+};
+
+const bootstrap = () => {
+    const gtfs = loadGTFS(path.join(__dirname, '..', 'etc'));
+    const raptor = new Raptor();
+
+    console.time('Loading phase');
+    raptor.load({ ...gtfs, maxTransfers: 100, maxDays: 3 });
+    console.timeEnd('Loading phase');
+
+    console.time('Planning phase');
+    const results = raptor.plan({
+        sourceStopId: '1014894',
+        targetStopId: '1450689',
+        date: RaptorDate.fromString('2024-09-06'),
+        time: RaptorTime.fromString('09:00:00'),
+    });
+    console.timeEnd('Planning phase');
+
+    print(gtfs, results);
 };
 
 bootstrap();

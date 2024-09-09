@@ -13,7 +13,8 @@ export type Service = Record<string, string>;
 export type Transfer = Record<string, string>;
 export type StopTime = Record<string, string>;
 
-export type Time = `${string}:${string}:${string}`;
+export type DateString = `${string}-${string}-${string}`;
+export type TimeString = `${string}:${string}:${string}`;
 
 export interface GTFS {
     agency: Agency[];
