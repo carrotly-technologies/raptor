@@ -1,21 +1,21 @@
-import { calculateHaversineDistance } from '../utils/calculate-haversine-distance.function';
 import { RouteId, Service, ServiceId, Stop, StopId, StopTime, TripId } from '../gtfs/gtfs.types';
 import { numberToTime } from '../utils/number-to-time.function';
+import { RaptorDate } from '../utils/raptor-date.class';
+import { RaptorTime } from '../utils/raptor-time.class';
 import { timeToNumber } from '../utils/time-to-number.function';
-import { Journey, LoadArgs, PlanArgs, RouteIndex, StopIndex } from './raptor.types';
-import { dateToNumber } from '../utils/date-to-number';
+import { Journey, LoadArgs, PlanArgs, Results, RouteIndex, StopIndex } from './raptor.types';
 
 export class Raptor {
     private maxTransfers: number = 0;
+    private maxDays: number = 0;
 
     private routesIdx: Record<RouteId, RouteIndex> = {};
     private stopsIdx: Record<StopId, StopIndex> = {};
-
-    // temporary mock for tests
     private footpaths: Record<StopId, Record<StopId, number>> = {};
 
     public load(args: LoadArgs): void {
         this.maxTransfers = args.maxTransfers;
+        this.maxDays = args.maxDays;
 
         const stopTimes = [...args.stopTimes].sort((a, b) => Number(a['stop_sequence']) - Number(b['stop_sequence']));
         const stopTimesByTripId = stopTimes.reduce<Record<TripId, StopTime[]>>((acc, stopTime) => {
@@ -37,19 +37,24 @@ export class Raptor {
             return acc;
         }, {});
 
-        const [includeDatesByServiceId, excludeDatesByServiceId] = args.calendarDates.reduce<Record<ServiceId, number[]>[]>((acc, calendarDate) => {
-            const serviceId = calendarDate.service_id;
+        const [includeDatesByServiceId, excludeDatesByServiceId] = args.calendarDates.reduce<
+            Record<ServiceId, number[]>[]
+        >(
+            (acc, calendarDate) => {
+                const serviceId = calendarDate.service_id;
 
-            if (calendarDate.exception_type === '1') {
-                acc[0][serviceId] ??= [];
-                acc[0][serviceId].push(Number(calendarDate.date));
-            } else {
-                acc[1][serviceId] ??= [];
-                acc[1][serviceId].push(Number(calendarDate.date));
-            }
+                if (calendarDate.exception_type === '1') {
+                    acc[0][serviceId] ??= [];
+                    acc[0][serviceId].push(Number(calendarDate.date));
+                } else {
+                    acc[1][serviceId] ??= [];
+                    acc[1][serviceId].push(Number(calendarDate.date));
+                }
 
-            return acc;
-        }, [{}, {}]);
+                return acc;
+            },
+            [{}, {}],
+        );
 
         args.trips.forEach((trip) => {
             const stopTimes = stopTimesByTripId[trip['trip_id']] || [];
@@ -60,18 +65,30 @@ export class Raptor {
 
             this.routesIdx[routeId] ??= {
                 routeId: trip['route_id'],
+                tripByTripId: {},
                 trips: [],
                 stops: [],
             };
 
             const calendar = calendarByServiceId[trip['service_id']];
 
+            this.routesIdx[routeId].tripByTripId[trip['trip_id']] ??= { stopTimeByStopId: {} };
+            this.routesIdx[routeId].tripByTripId[trip['trip_id']].stopTimeByStopId = stopTimes.reduce<
+                Record<StopId, { arrivalTime: number; departureTime: number }>
+            >((acc, stopTime) => {
+                acc[stopTime['stop_id']] = {
+                    arrivalTime: timeToNumber(stopTime['arrival_time']),
+                    departureTime: timeToNumber(stopTime['departure_time']),
+                };
+
+                return acc;
+            }, {});
 
             this.routesIdx[routeId].trips.push({
                 tripId: trip['trip_id'],
-                schedule: {
-                    startDate: calendar ? dateToNumber(calendar.start_date) : 0,
-                    endDate: calendar ? dateToNumber(calendar.end_date) : Number.MAX_SAFE_INTEGER,
+                service: {
+                    startDate: calendar ? Number(calendar.start_date) : 0,
+                    endDate: calendar ? Number(calendar.end_date) : Number.MAX_SAFE_INTEGER,
                     monday: calendar?.monday === '1',
                     tuesday: calendar?.tuesday === '1',
                     wednesday: calendar?.wednesday === '1',
@@ -80,7 +97,7 @@ export class Raptor {
                     saturday: calendar?.saturday === '1',
                     sunday: calendar?.sunday === '1',
                     exclude: excludeDatesByServiceId[trip['service_id']] || [],
-                    include: includeDatesByServiceId[trip['service_id']] || []
+                    include: includeDatesByServiceId[trip['service_id']] || [],
                 },
                 stopTimes: stopTimes.map((stopTime) => ({
                     stopId: stopTime['stop_id'],
@@ -109,51 +126,27 @@ export class Raptor {
             });
         });
 
-        const walkingSpeed = 1.33; // m/s
-        const maxWalkingTime = 5 * 60;
-        const maxWalkingDistance = maxWalkingTime * walkingSpeed;
+        this.footpaths = args.transfers.reduce<Record<StopId, Record<StopId, number>>>((acc, transfer) => {
+            const fromStopId = transfer['from_stop_id'];
+            const toStopId = transfer['to_stop_id'];
+            const minTransferTime = Number(transfer['min_transfer_time']);
 
-        args.stops.forEach((sourceStop) => {
-            this.footpaths[sourceStop['stop_id']] ??= {};
+            acc[fromStopId] ??= {};
+            acc[fromStopId][toStopId] = minTransferTime;
 
-            args.stops.forEach((targetStop) => {
-                if (sourceStop['stop_id'] === targetStop['stop_id']) return;
-
-                const walkingDistance = calculateHaversineDistance(
-                    Number(sourceStop['stop_lat']),
-                    Number(sourceStop['stop_lon']),
-                    Number(targetStop['stop_lat']),
-                    Number(targetStop['stop_lon']),
-                );
-
-                if (walkingDistance > maxWalkingDistance) return;
-
-                const walkingTime = Math.ceil(walkingDistance / walkingSpeed);
-                this.footpaths[sourceStop['stop_id']][targetStop['stop_id']] = walkingTime;
-            });
-        });
+            return acc;
+        }, {});
     }
 
     public plan(args: PlanArgs): Journey[] {
         const sourceStopId = args.sourceStopId;
         const targetStopId = args.targetStopId;
-        const departureTime = args.departureTime;
+        const dateNumber = args.date.toNumber();
+        const dayOfWeek = args.date.getDayOfWeek();
+        // const timeNumber = timeToNumber(args.time);
 
         // Intermediate results
-        const results: Record<
-            StopId,
-            Record<
-                number,
-                {
-                    bestTripId?: TripId;
-                    sourceStopId: StopId;
-                    targetStopId: StopId;
-                    arrivalTime?: number;
-                    departureTime?: number;
-                    footpath?: any;
-                }
-            >
-        > = {};
+        const results: Results = {};
 
         // Initialization of the algorithm
         const knownArrivals: Array<Record<string, number>> = [];
@@ -169,7 +162,12 @@ export class Raptor {
             bestArrivals[stopId] = Number.MAX_SAFE_INTEGER;
         }
 
-        knownArrivals[0][sourceStopId] = timeToNumber(departureTime);
+        // args.source.forEach(({ stopId, time }) => {
+        // knownArrivals[0][stopId] = time.toNumber();
+        // markedStopIds.add(stopId);
+        // });
+
+        knownArrivals[0][sourceStopId] = args.time.toNumber();
         markedStopIds.add(sourceStopId);
 
         for (let k = 1; /* k < this.maxTransfers && */ markedStopIds.size > 0; k++) {
@@ -195,6 +193,7 @@ export class Raptor {
             for (const routeId in queue) {
                 let bestTripId: TripId | null = null;
                 let boardingId: StopId | null = null;
+                let timeShift = 0;
 
                 const route = this.routesIdx[routeId];
                 const queueStopIdx = route.stops.findIndex((stop) => stop.stopId === queue[routeId]);
@@ -203,14 +202,14 @@ export class Raptor {
 
                 for (const stop of stops) {
                     const stopId = stop.stopId;
-                    const arrivalTime = this.getArrivalTime(routeId, bestTripId, stopId);
+                    const arrivalTime = this.getArrivalTime(routeId, bestTripId, stopId) + timeShift;
 
                     // Can the label be improved in this round?
                     // Includes local and target pruning
                     // I have no clue what "t != ⊥" means in this case, so I will ignore it for now
                     if (bestTripId && arrivalTime < Math.min(bestArrivals[stopId], bestArrivals[targetStopId])) {
-                        const departureTime = this.getDepartureTime(routeId, bestTripId, boardingId);
-                       
+                        const departureTime = this.getDepartureTime(routeId, bestTripId, boardingId) + timeShift;
+
                         knownArrivals[k][stopId] = arrivalTime;
                         bestArrivals[stopId] = arrivalTime;
                         markedStopIds.add(stopId);
@@ -228,9 +227,18 @@ export class Raptor {
                     // Can we catch an earlier trip at this stop?
                     if (
                         !bestTripId ||
-                        knownArrivals[k - 1][stop.stopId] <= this.getDepartureTime(routeId, bestTripId, stopId)
+                        knownArrivals[k - 1][stop.stopId] <=
+                            this.getDepartureTime(routeId, bestTripId, stopId) + timeShift
                     ) {
-                        bestTripId = this.getEarliestTripId(routeId, stopId, knownArrivals[k - 1][stop.stopId]);
+                        [bestTripId, timeShift] = this.getEarliestTripId(
+                            routeId,
+                            stopId,
+                            args.date,
+                            RaptorTime.fromNumber(knownArrivals[k - 1][stop.stopId]),
+                            // dateNumber,
+                            // dayOfWeek,
+                            // knownArrivals[k - 1][stop.stopId],
+                        );
                         boardingId = stopId;
                     }
                 }
@@ -263,6 +271,10 @@ export class Raptor {
             }
         }
 
+        // return results;
+
+        // console.log(results);
+
         return this.transformToJourney(results, targetStopId);
     }
 
@@ -279,76 +291,123 @@ export class Raptor {
     // Returns arrival time of a trip at a stop
     // @todo: optimize search time by using index
     private getArrivalTime(routeId: string, tripId: string, stopId: string): number | null {
-        const route = this.routesIdx[routeId];
+        const stopTime = this.routesIdx[routeId]?.tripByTripId[tripId]?.stopTimeByStopId[stopId];
 
-        const trip = route.trips.find((trip) => trip.tripId === tripId);
-        if (!trip) return null;
+        return stopTime?.arrivalTime || null;
 
-        const stopTime = trip.stopTimes.find((stopTime) => stopTime.stopId === stopId);
-        if (!stopTime) return null;
+        // const route = this.routesIdx[routeId];
 
-        return stopTime.arrivalTime;
+        // const trip = route.trips.find((trip) => trip.tripId === tripId);
+        // if (!trip) return null;
+
+        // const stopTime = trip.stopTimes.find((stopTime) => stopTime.stopId === stopId);
+        // if (!stopTime) return null;
+
+        // return stopTime.arrivalTime;
     }
 
     // Returns departure time of a trip at a stop
     // @todo: optimize search time by using index
     private getDepartureTime(routeId: string, tripId: string, stopId: string): number | null {
-        const route = this.routesIdx[routeId];
+        const stopTime = this.routesIdx[routeId]?.tripByTripId[tripId]?.stopTimeByStopId[stopId];
 
-        const trip = route.trips.find((trip) => trip.tripId === tripId);
-        if (!trip) return null;
+        return stopTime?.departureTime || null;
+        // const route = this.routesIdx[routeId];
 
-        const stopTime = trip.stopTimes.find((stopTime) => stopTime.stopId === stopId);
-        if (!stopTime) return null;
+        // const trip = route.trips.find((trip) => trip.tripId === tripId);
+        // if (!trip) return null;
 
-        return stopTime.departureTime;
+        // const stopTime = trip.stopTimes.find((stopTime) => stopTime.stopId === stopId);
+        // if (!stopTime) return null;
+
+        // return stopTime.departureTime;
     }
 
     // Returns the earliest trip that stops at a stop after a minimum arrival time
-    private getEarliestTripId(routeId: string, stopId: string, arrivalTime: number): TripId | null {
+    private getEarliestTripId(
+        routeId: string,
+        stopId: string,
+        date: RaptorDate,
+        time: RaptorTime,
+        // dateNumber: number,
+        // dayOfWeek: string,
+        // timeNumber: number,
+    ): [TripId, number] | null {
         const route = this.routesIdx[routeId];
 
         const stops = route.stops;
         const stopIdx = stops.findIndex((stop) => stop.stopId === stopId);
 
-        const dateNumber = Number(new Date().toISOString().split('T')[0].replace(/-/g, ''));
-        const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+        // const dateNumber = date.toNumber();
+        // const dayOfWeek = date.getDayOfWeek();
+        // const timeNumber = time.toNumber();
 
-        const trips = route.trips
-            .filter((trip) => trip.schedule.include.includes(dateNumber) || (!trip.schedule.exclude.includes(dateNumber) && trip.schedule.startDate <= dateNumber && trip.schedule.endDate >= dateNumber && trip.schedule[dayName]))
-            .filter((trip) => trip.stopTimes[stopIdx].arrivalTime >= arrivalTime)
-        
-        const trip = trips.reduce(
-            (best, current) =>
-                current.stopTimes[stopIdx].departureTime < best.stopTimes[stopIdx].departureTime ? current : best,
-            trips[0],
-        );
+        // const trips = route.trips
+        //     .filter(
+        //         (trip) =>
+        //             trip.service.include.includes(dateNumber) ||
+        //             (!trip.service.exclude.includes(dateNumber) &&
+        //                 trip.service.startDate <= dateNumber &&
+        //                 trip.service.endDate >= dateNumber &&
+        //                 trip.service[dayOfWeek]),
+        //     )
+        //     .filter((trip) => trip.stopTimes[stopIdx].arrivalTime >= timeNumber);
 
-        if (!trip) return null;
+        // const trip = trips.reduce(
+        //     (best, current) =>
+        //         current.stopTimes[stopIdx].departureTime < best.stopTimes[stopIdx].departureTime ? current : best,
+        //     trips[0],
+        // );
 
-        return trip.tripId;
+        // if (!trip) return null;
+
+        // now the above script should work as follows:
+        // it looks for earliest trip at given date
+        // if not trips are found, it increments the date by one day
+        // it repeats until it finds a trip or reaches the maxDays limit
+
+        let dateNumber = date.toNumber();
+        let dayOfWeek = date.getDayOfWeek();
+        let timeNumber = time.toNumber();
+
+        for (let i = 0; i < this.maxDays; i++) {
+            const trips = route.trips
+                .filter(
+                    (trip) =>
+                        trip.service.include.includes(dateNumber) ||
+                        (!trip.service.exclude.includes(dateNumber) &&
+                            trip.service.startDate <= dateNumber &&
+                            trip.service.endDate >= dateNumber &&
+                            trip.service[dayOfWeek]),
+                )
+                .filter((trip) => trip.stopTimes[stopIdx].arrivalTime >= timeNumber);
+
+            if (trips.length > 0) {
+                const trip = trips.reduce(
+                    (best, current) =>
+                        current.stopTimes[stopIdx].departureTime < best.stopTimes[stopIdx].departureTime
+                            ? current
+                            : best,
+                    trips[0],
+                );
+
+                return [trip.tripId, i * 86400];
+            }
+
+            const nextDate = RaptorDate.fromNumber(date.toNumber() + 1);
+            dateNumber = nextDate.toNumber();
+            dayOfWeek = nextDate.getDayOfWeek();
+            timeNumber = 0;
+        }
+
+        return [null, 0];
     }
 
     // Transforms the intermediate results into a journey interface
-    private transformToJourney(
-        results: Record<
-            StopId,
-            Record<
-                number,
-                {
-                    bestTripId?: TripId;
-                    sourceStopId: StopId;
-                    targetStopId: StopId;
-                    arrivalTime?: number;
-                    departureTime?: number;
-                }
-            >
-        >,
-        targetStopId: StopId,
-    ): Journey[] {
+    private transformToJourney(results: Results, targetStopId: StopId): Journey[] {
         const journeys: Journey[] = [];
 
-        for (const k of Object.keys(results[targetStopId])) {
+        for (const k of Object.keys(results[targetStopId] || {})) {
             const segments: Journey['segments'] = [];
 
             let currentStopId = targetStopId;

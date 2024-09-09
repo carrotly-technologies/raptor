@@ -2,11 +2,10 @@
 
 ## To be done...
 
-- [ ] Respect calendar and calendar dates
-- [ ] Support footpath transfers
-- [ ] Support midnight transfers (journeys that start before midnight and end after midnight)
+- [x] Respect calendar and calendar dates
+- [x] Support footpath transfers
+- [x] Support midnight transfers (journeys that start before midnight and end after midnight)
 - [ ] Implement rRAPTOR extension for finding multiple journeys
-- [ ] Implement mcRAPTOR extension for multi-criteria journey planning
 
 ---
 
@@ -53,6 +52,22 @@ Date: Friday after 11:45:00
 Source: 1014894 (Nowy Targ)
 
 Target: 1450689 (Andrychów)
+
+### Four Transfers
+
+Date: Friday after 17:00:00
+
+Source: 1014894 (Nowy Targ)
+
+Target: 1450689 (Andrychów)
+
+17:15 - 19:12 bus   A21 Nowy Sącz MDA, Koleje Małopolskie, Nowy Targ D.A. → Nowy Sącz MDA
+20:05 - 21:53 bus   A22 Tarnów Dworzec Autobusowy, Koleje Małopolskie, Nowy Sącz MDA → Tarnów Dworzec Autobusowy
+21:53 - 21:59 foot  TARNÓW
+22:20 - 23:32 rail  peron II, tor 4, Koleje Małopolskie sp. z o.o., TARNÓW → KRAKÓW ZABŁOCIE
+04:01 - 05:07 rail  peron I, tor 1, Koleje Małopolskie sp. z o.o., KRAKÓW ZABŁOCIE → ZATOR
+05:07 - 05:10 foot  Zator PKP
+07:53 - 08:25 bus   A25 Andrychów D.A., Koleje Małopolskie, Zator PKP → Andrychów Dworzec Autobusowy
 
 ---
 

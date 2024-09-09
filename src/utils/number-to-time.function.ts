@@ -1,8 +1,8 @@
-import { Time } from '../gtfs/gtfs.types';
+import { TimeString } from '../gtfs/gtfs.types';
 
-const cache: Record<number, Time> = {};
+const cache: Record<number, TimeString> = {};
 
-export const numberToTime = (num: number): Time => {
+export const numberToTime = (num: number): TimeString => {
     if (cache[num]) return cache[num];
 
     const hours = Array(1)
@@ -17,7 +17,6 @@ export const numberToTime = (num: number): Time => {
         .concat(Math.floor(num % 60))
         .join('0')
         .slice(-2);
-    cache[num] = `${hours}:${minutes}:${seconds}`;
 
-    return cache[num];
+    return (cache[num] = `${hours}:${minutes}:${seconds}`);
 };

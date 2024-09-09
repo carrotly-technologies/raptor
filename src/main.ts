@@ -1,23 +1,12 @@
 import * as path from 'path';
 import { Raptor } from './algo/raptor.class';
+import { Journey } from './algo/raptor.types';
+import { GTFS } from './gtfs/gtfs.types';
 import { loadGTFS } from './gtfs/load-gtfs.function';
+import { RaptorDate } from './utils/raptor-date.class';
+import { RaptorTime } from './utils/raptor-time.class';
 
-const bootstrap = () => {
-    const gtfs = loadGTFS(path.join(__dirname, '..', 'etc'));
-    const raptor = new Raptor();
-
-    console.time('Loading phase');
-    raptor.load({ ...gtfs, maxTransfers: 100 });
-    console.timeEnd('Loading phase');
-
-    console.time('Planning phase');
-    const journeys = raptor.plan({
-        sourceStopId: '1014894',
-        targetStopId: '1606200',
-        departureTime: '11:45:00',
-    });
-    console.timeEnd('Planning phase');
-
+const print = (gtfs: GTFS, journeys: Journey[]) => {
     console.log('@carrotly/raptor');
 
     journeys.forEach((journey, i) => {
@@ -61,5 +50,79 @@ const bootstrap = () => {
         });
     });
 };
+
+const bootstrap = () => {
+    const gtfs = loadGTFS(path.join(__dirname, '..', 'etc'));
+    const raptor = new Raptor();
+
+    console.time('Loading phase');
+    raptor.load({ ...gtfs, maxTransfers: 100, maxDays: 3 });
+    console.timeEnd('Loading phase');
+
+    // console.time('Planning phase');
+    // const results = raptor.plan({
+    //     sourceStopId: '1014894',
+    //     targetStopId: '1606200',
+    //     date: '2024-09-07',
+    //     time: '17:00:00',
+    // });
+    // console.timeEnd('Planning phase');
+
+    console.time('Planning phase');
+    const results = raptor.plan({
+        sourceStopId: '1014894',
+        targetStopId: '1450689',
+        date: RaptorDate.fromString('2024-09-06'),
+        time: RaptorTime.fromString('17:00:00'),
+    });
+    console.timeEnd('Planning phase');
+
+    print(gtfs, results);
+
+    // const indexes: Results[] = [];
+    // let date = RaptorDate.fromString('2024-09-06');
+    // let time = RaptorTime.fromString('17:00:00');
+
+    // let source = [{ stopId: '1014894', time }];
+    // let target = [{ stopId: '1606200' }];
+
+    // for (let i = 0; i < 3; i++) {
+    //     const results = raptor.plan({
+    //         source,
+    //         target,
+    //         date: date,
+    //     });
+
+    //     const journeys = [];
+
+    //     if (journeys.length > 0) {
+    //         print(gtfs, journeys);
+    //         break;
+    //     }
+
+    //     source =
+    //     date = RaptorDate.fromNumber(date.toNumber() + 1);
+    //     indexes.push(results);
+    // }
+};
+
+// const foo = (currResults: Results, prevResults: Results, targetStopId: string) => {
+
+// }
+
+// private getJourneysFromConnections(
+//     kConnections: ConnectionIndex,
+//     prevConnections: ConnectionIndex[],
+//     destinations: StopID[]
+//   ): Journey[] {
+
+//     const destinationsWithResults = destinations.filter(d => Object.keys(kConnections[d]).length > 0);
+//     const initialResults = destinationsWithResults.flatMap(d => this.resultsFactory.getResults(kConnections, d));
+
+//     // reverse the previous connections and then work back through each day pre-pending journeys
+//     return prevConnections
+//       .reverse()
+//       .reduce((journeys, connections) => this.completeJourneys(journeys, connections), initialResults);
+//   }
 
 bootstrap();

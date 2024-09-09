@@ -1,5 +1,7 @@
-const cache: Record<string, number> = {};
+import { DateString } from '../gtfs/gtfs.types';
 
-export const dateToNumber = (date: string): number => {
-    return cache[date] || (cache[date] = Number(date));
-}
+const cache: Record<DateString, number> = {};
+
+export const dateToNumber = (date: DateString): number => {
+    return cache[date] || (cache[date] = Number(date.replace(/-/g, '')));
+};
