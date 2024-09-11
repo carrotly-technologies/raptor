@@ -1,7 +1,8 @@
-import { RouteId, Service, ServiceId, Stop, StopId, StopTime, TripId } from '../gtfs/gtfs.types';
-import { RaptorDate } from '../utils/raptor-date.class';
-import { RaptorTime } from '../utils/raptor-time.class';
-import { ConnectionByStopId, Journey, LoadArgs, PlanArgs, RouteIndex, StopIndex } from './raptor.types';
+import { ConnectionByStopId, Journey, LoadArgs, PlanArgs, RangeArgs, RouteIndex, StopIndex } from '@lib/algo/raptor.types';
+import { RouteId, Service, ServiceId, Stop, StopId, StopTime, TripId } from '@lib/gtfs/gtfs.types';
+import { RaptorDate } from '@lib/utils/raptor-date.class';
+import { RaptorTime } from '@lib/utils/raptor-time.class';
+import * as util from 'node:util';
 
 export class Raptor {
     private maxTransfers: number = 0;
@@ -70,7 +71,22 @@ export class Raptor {
 
             const calendar = calendarByServiceId[trip['service_id']];
 
-            this.routesIdx[routeId].tripByTripId[trip['trip_id']] ??= { stopTimeByStopId: {} };
+            this.routesIdx[routeId].tripByTripId[trip['trip_id']] ??= {
+                service: {
+                    startDate: calendar ? Number(calendar.start_date) : 0,
+                    endDate: calendar ? Number(calendar.end_date) : Number.MAX_SAFE_INTEGER,
+                    monday: calendar?.monday === '1',
+                    tuesday: calendar?.tuesday === '1',
+                    wednesday: calendar?.wednesday === '1',
+                    thursday: calendar?.thursday === '1',
+                    friday: calendar?.friday === '1',
+                    saturday: calendar?.saturday === '1',
+                    sunday: calendar?.sunday === '1',
+                    exclude: excludeDatesByServiceId[trip['service_id']] || [],
+                    include: includeDatesByServiceId[trip['service_id']] || [],
+                },
+                stopTimeByStopId: {}
+            };
             this.routesIdx[routeId].tripByTripId[trip['trip_id']].stopTimeByStopId = stopTimes.reduce<
                 Record<StopId, { arrivalTime: RaptorTime; departureTime: RaptorTime }>
             >((acc, stopTime) => {
@@ -136,11 +152,49 @@ export class Raptor {
         }, {});
     }
 
+    public range(args: RangeArgs): Journey[] {
+        const journeys: Journey[] = [];
+
+        const sourceStopId = args.sourceStopId;
+        const targetStopId = args.targetStopId;
+        const date = RaptorDate.from(args.date);
+
+        const maxTime = RaptorTime.from("24:00:00");
+        let time = RaptorTime.from("00:00:00");
+
+        while (time.lt(maxTime)) {
+            const candidats_1 = this.plan({ sourceStopId, targetStopId, date, time });
+            const candidats_2 = candidats_1.filter((journey) => journey.departureTime <= maxTime.toNumber());
+
+            if (candidats_2.length === 0) break;
+
+            journeys.push(...candidats_2);
+            time = RaptorTime.fromNumber(candidats_2.reduce((acc, journey) => Math.min(acc, journey.departureTime), Number.MAX_SAFE_INTEGER) + 1);
+        }
+
+        const dominated: number[] = [];
+
+        for (let i = 0; i < journeys.length; i++) {
+            for (let j = 0; j < journeys.length; j++) {
+                if (j === i) {
+                    continue;
+                }
+
+                if (journeys[i].departureTime >= journeys[j].departureTime && journeys[i].arrivalTime <= journeys[j].arrivalTime) {
+                    dominated[j] ??= 0;
+                    dominated[j]++;
+                }
+            }
+        }
+
+        return journeys.filter((journey, i) => !dominated[i] || dominated[i] === 0);
+    }
+
     public plan(args: PlanArgs): Journey[] {
         const sourceStopId = args.sourceStopId;
         const targetStopId = args.targetStopId;
-        const date = typeof args.date === 'string' ? RaptorDate.fromString(args.date) : typeof args.date === 'number' ? RaptorDate.fromNumber(args.date) : args.date;
-        const time = typeof args.time === 'string' ? RaptorTime.fromString(args.time) : typeof args.time === 'number' ? RaptorTime.fromNumber(args.time) : args.time;
+        const date = RaptorDate.from(args.date);
+        const time = RaptorTime.from(args.time);
 
         // Intermediate results
         const connectionByStopId: ConnectionByStopId = {};
@@ -162,7 +216,7 @@ export class Raptor {
         knownArrivals[0][sourceStopId] = time.toNumber();
         markedStopIds.add(sourceStopId);
 
-        for (let k = 1; /* k < this.maxTransfers && */ markedStopIds.size > 0; k++) {
+        for (let k = 1; k < this.maxTransfers && markedStopIds.size > 0; k++) {
             // Accumulate routes serving marked stops from previous round
             const queue: Record<RouteId, StopId> = {};
 
@@ -202,6 +256,20 @@ export class Raptor {
                         const departureTime =
                             this.getDepartureTime(routeId, bestTripId, boardingId)?.toNumber() + timeShift;
 
+                        if (departureTime < connectionByStopId[boardingId]?.[k - 1]?.departureTime) {
+                            // @fixme
+                            // This is some temporary workaround because for some reason the actual
+                            // implementation sometimes returns journeys were transfers require time travel
+                            //
+                            // Example:
+                            // 28:24 - 31:29 rail      DUNAJEC, Koleje Małopolskie sp. z o.o., NOWY SĄCZ → KRAKÓW GŁÓWNY (2023_2024_1529368)
+                            // 27:57 - 29:07 rail      SKA2, Koleje Małopolskie sp. z o.o., KRAKÓW GŁÓWNY → ZATOR (2023_2024_1529585)
+                            //
+                            // We cannot take the train at 27:57 because we arrive at 31:29
+
+                            continue;
+                        }
+
                         knownArrivals[k][stopId] = arrivalTime;
                         bestArrivals[stopId] = arrivalTime;
                         markedStopIds.add(stopId);
@@ -220,7 +288,7 @@ export class Raptor {
                     if (
                         !bestTripId ||
                         knownArrivals[k - 1][stop.stopId] <=
-                            this.getDepartureTime(routeId, bestTripId, stopId)?.toNumber() + timeShift
+                        this.getDepartureTime(routeId, bestTripId, stopId)?.toNumber() + timeShift
                     ) {
                         [bestTripId, timeShift] = this.getEarliestTripId(
                             routeId,
@@ -373,7 +441,11 @@ export class Raptor {
             }
 
             segments.reverse();
-            journeys.push({ segments });
+            journeys.push({
+                segments,
+                departureTime: segments[0].departureTime,
+                arrivalTime: segments[segments.length - 1].arrivalTime,
+            });
         }
 
         return journeys;

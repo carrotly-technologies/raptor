@@ -1,22 +1,36 @@
 {
   "name": "@carrotly-technologies/raptor",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Round-Based Public Transit Routing",
-  "author": "Carrotly Technologies",
+  "author": "Carrotly Technologies <contact@carrotly.tech>",
   "license": "UNLICENSED",
   "private": true,
   "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "files": [
+    "dist/**/*"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "prebuild": "rimraf dist",
-    "build": "tsc",
-    "start": "node dist/main.js",
+    "build": "yarn swc src -d dist -s true --delete-dir-on-start --strip-leading-paths",
+    "build:watch": "yarn swc src -d dist -s true --delete-dir-on-start --strip-leading-paths --watch",
+    "postbuild": "find dist -type f -name '*.d.ts' -exec sed -i 's|@lib/\\(.*\\)|\\./\\1|g' {} +",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
+    "test": "node --require @swc-node/register --test ./test/**/*.spec.ts ",
+    "test:watch": "node --watch --require @swc-node/register --test ./test/**/*.spec.ts",
     "cmd:create-transfers": "node dist/cmd/create-transfers.command.js"
   },
   "dependencies": {},
   "devDependencies": {
+    "@swc-node/register": "1.10.9",
+    "@swc/cli": "0.4.0",
+    "@swc/core": "1.7.26",
     "@types/node": "22.5.4",
+    "chokidar": "3.6.0",
     "eslint": "9.10.0",
     "eslint-config-prettier": "9.1.0",
     "eslint-plugin-prettier": "5.2.1",

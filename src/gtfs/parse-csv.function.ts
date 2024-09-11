@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as fs from 'node:fs';
 
 export const parseCSV = (filepath: string): Record<string, string>[] => {
     const data = fs.readFileSync(filepath, 'utf8');

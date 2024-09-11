@@ -1,36 +1,11 @@
+// This file is kept only for the IDEs to resolve the paths correctly.
+// The actual compilation is done by SWC, which uses the .swcrc file.
 {
   "compilerOptions": {
-    "target": "es5",
-    "module": "commonjs",
-    "strict": true,
-    "outDir": "./dist",
-    "baseUrl": "./src",
-    "esModuleInterop": true,
-    "incremental": true,
-    "skipLibCheck": true,
-    "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
-    "removeComments": true,
-    "downlevelIteration": true,
+    "baseUrl": "./",
     "paths": {
-      "@lib/*": [
-        "src/*"
-      ],
-      "@test/*": [
-        "test/*"
-      ],
+      "@lib/*": ["src/*"],
+      "@test/*": ["test/*"],
     }
-  },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "src/**/*.spec.ts",
-    "test",
-    "dist",
-    "node_modules"
-  ]
+  }
 }

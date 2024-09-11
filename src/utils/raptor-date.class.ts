@@ -1,7 +1,19 @@
-import { DateString } from '../gtfs/gtfs.types';
+import { DateString } from '@lib/gtfs/gtfs.types';
 
 export class RaptorDate {
     constructor(private readonly date: number = 0) {}
+
+    public static from(date: RaptorDate | string | number): RaptorDate {
+        if (typeof date === 'number') {
+            return RaptorDate.fromNumber(date);
+        }
+
+        if (typeof date === 'string') {
+            return RaptorDate.fromString(date);
+        }
+
+        return date;
+    }
 
     public static fromString(date: string): RaptorDate {
         return new RaptorDate(Number(date.replace(/-/g, '')));

@@ -9,9 +9,9 @@ import {
     Transfer,
     Trip,
     TripId,
-} from '../gtfs/gtfs.types';
-import { RaptorDate } from '../utils/raptor-date.class';
-import { RaptorTime } from '../utils/raptor-time.class';
+} from '@lib/gtfs/gtfs.types';
+import { RaptorDate } from '@lib/utils/raptor-date.class';
+import { RaptorTime } from '@lib/utils/raptor-time.class';
 
 export interface LoadArgs {
     stops: Stop[];
@@ -27,6 +27,12 @@ export interface LoadArgs {
     walkingSpeed?: number;
 }
 
+export interface RangeArgs {
+    sourceStopId: StopId;
+    targetStopId: StopId;
+    date: RaptorDate | string | number;
+}
+
 export interface PlanArgs {
     sourceStopId: StopId;
     targetStopId: StopId;
@@ -40,6 +46,19 @@ export type RouteIndex = {
     tripByTripId: Record<
         TripId,
         {
+            service: {
+                startDate: number;
+                endDate: number;
+                monday: boolean;
+                tuesday: boolean;
+                wednesday: boolean;
+                thursday: boolean;
+                friday: boolean;
+                saturday: boolean;
+                sunday: boolean;
+                exclude: number[];
+                include: number[];
+            };
             stopTimeByStopId: Record<
                 StopId,
                 {
@@ -105,4 +124,6 @@ export interface Journey {
         arrivalTime: number;
         departureTime: number;
     }[];
+    departureTime: number;
+    arrivalTime: number;
 }

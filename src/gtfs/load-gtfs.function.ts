@@ -1,8 +1,8 @@
-import * as path from 'path';
-import { checkIfFileExists } from '../utils/check-if-file-exists.function';
-import { fromEntries } from '../utils/from-entries.function';
-import { GTFS } from './gtfs.types';
-import { parseCSV } from './parse-csv.function';
+import { GTFS } from '@lib/gtfs/gtfs.types';
+import { parseCSV } from '@lib/gtfs/parse-csv.function';
+import { checkIfFileExists } from '@lib/utils/check-if-file-exists.function';
+import { fromEntries } from '@lib/utils/from-entries.function';
+import * as path from 'node:path';
 
 export const loadGTFS = (dirpath: string): GTFS => {
     const files = [

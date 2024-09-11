@@ -1,7 +1,19 @@
-import { TimeString } from '../gtfs/gtfs.types';
+import { TimeString } from '@lib/gtfs/gtfs.types';
 
 export class RaptorTime {
     constructor(private readonly time: number = 0) {}
+
+    public static from(time: RaptorTime | string | number): RaptorTime {
+        if (typeof time === 'number') {
+            return RaptorTime.fromNumber(time);
+        }
+
+        if (typeof time === 'string') {
+            return RaptorTime.fromString(time);
+        }
+
+        return time;
+    }
 
     public static fromString(time: string): RaptorTime {
         const [hours, minutes, seconds] = time.split(':').map(Number);

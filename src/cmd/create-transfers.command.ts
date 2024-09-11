@@ -1,7 +1,7 @@
-import * as fs from 'fs';
-import { parseCSV } from '../gtfs/parse-csv.function';
-import { calculateHaversineDistance } from '../utils/calculate-haversine-distance.function';
-import { checkIfFileExists } from '../utils/check-if-file-exists.function';
+import { parseCSV } from '@lib/gtfs/parse-csv.function';
+import { calculateHaversineDistance } from '@lib/utils/calculate-haversine-distance.function';
+import { checkIfFileExists } from '@lib/utils/check-if-file-exists.function';
+import * as fs from 'node:fs';
 
 const bootstrap = () => {
     const stopsPath = process.argv[2];

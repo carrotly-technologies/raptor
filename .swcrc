@@ -1,0 +1,30 @@
+{
+    "$schema": "https://swc.rs/schema.json",
+    "sourceMaps": true,
+    "jsc": {
+      "parser": {
+        "syntax": "typescript",
+        "decorators": true,
+        "dynamicImport": true
+      },
+      "target": "es5",
+      "baseUrl": "./",
+      "preserveAllComments": false,
+      "experimental": {
+        "emitIsolatedDts": true
+      },
+      "paths": {
+        "@lib/*": ["src/*"],
+        "@tests/*": ["tests/*"]
+      }
+    },
+    "module": {
+        "type": "commonjs",
+        "strict": true,
+        "strictMode": true,
+        "lazy": false,
+        "noInterop": false
+    },
+    "minify": false
+}
+  
