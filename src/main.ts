@@ -2,9 +2,7 @@ export * from '@lib/algo/raptor.class';
 
 import { Raptor } from '@lib/algo/raptor.class';
 import { loadGTFS } from '@lib/gtfs/load-gtfs.function';
-import { RaptorTime } from '@lib/utils/raptor-time.class';
 import * as path from 'node:path';
-import * as util from 'node:util';
 
 const bootstrap = () => {
     const gtfs = loadGTFS(path.join(__dirname, '..', 'etc'));
@@ -15,9 +13,20 @@ const bootstrap = () => {
     raptor.load({ ...gtfs, maxTransfers: 10, maxDays: 2 });
     console.timeEnd('Loading phase');
 
-    for (let i = 0; i < 5; i++) {
+    /* for (let i = 0; i < 5; i++) {
         console.time('Planning phase');
         const journeys = raptor.range({
+            sourceStopId: '1014894',
+            targetStopId: '1450689',
+            date: '2024-09-13',
+        });
+
+        console.timeEnd('Planning phase');
+    } */
+
+    for (let i = 0; i < 5; i++) {
+        console.time('Planning phase');
+        const journeys = raptor.cRange({
             sourceStopId: '1014894',
             targetStopId: '1450689',
             date: '2024-09-13',
@@ -25,6 +34,21 @@ const bootstrap = () => {
         console.timeEnd('Planning phase');
     }
 
+    const journeys = raptor.range({
+        sourceStopId: '1014894',
+        targetStopId: '1450689',
+        date: '2024-09-13',
+    });
+
+    const cJourneys = raptor.cRange({
+        sourceStopId: '1014894',
+        targetStopId: '1450689',
+        date: '2024-09-13',
+    });
+
+    console.log('Journeys found:', journeys.length);
+    console.log('CJourneys found:', cJourneys.length);
+    // console.log(cJourneys === journeys);
     // console.log('Journeys found:', journeys.length);
 
     // journeys.forEach((journey, i) => {

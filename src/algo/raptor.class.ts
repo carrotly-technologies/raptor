@@ -1,8 +1,15 @@
-import { ConnectionByStopId, Journey, LoadArgs, PlanArgs, RangeArgs, RouteIndex, StopIndex } from '@lib/algo/raptor.types';
+import {
+    ConnectionByStopId,
+    Journey,
+    LoadArgs,
+    PlanArgs,
+    RangeArgs,
+    RouteIndex,
+    StopIndex,
+} from '@lib/algo/raptor.types';
 import { RouteId, Service, ServiceId, Stop, StopId, StopTime, TripId } from '@lib/gtfs/gtfs.types';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
-import * as util from 'node:util';
 
 export class Raptor {
     private maxTransfers: number = 0;
@@ -85,7 +92,7 @@ export class Raptor {
                     exclude: excludeDatesByServiceId[trip['service_id']] || [],
                     include: includeDatesByServiceId[trip['service_id']] || [],
                 },
-                stopTimeByStopId: {}
+                stopTimeByStopId: {},
             };
             this.routesIdx[routeId].tripByTripId[trip['trip_id']].stopTimeByStopId = stopTimes.reduce<
                 Record<StopId, { arrivalTime: RaptorTime; departureTime: RaptorTime }>
@@ -152,24 +159,26 @@ export class Raptor {
         }, {});
     }
 
-    public range(args: RangeArgs): Journey[] {
+    public cRange(args: RangeArgs): Journey[] {
         const journeys: Journey[] = [];
 
         const sourceStopId = args.sourceStopId;
         const targetStopId = args.targetStopId;
         const date = RaptorDate.from(args.date);
 
-        const maxTime = RaptorTime.from("24:00:00");
-        let time = RaptorTime.from("00:00:00");
+        const maxTime = RaptorTime.from('24:00:00');
+        let time = RaptorTime.from('00:00:00');
 
         while (time.lt(maxTime)) {
-            const candidats_1 = this.plan({ sourceStopId, targetStopId, date, time });
+            const candidats_1 = this.cPlan({ sourceStopId, targetStopId, date, time });
             const candidats_2 = candidats_1.filter((journey) => journey.departureTime <= maxTime.toNumber());
 
             if (candidats_2.length === 0) break;
 
             journeys.push(...candidats_2);
-            time = RaptorTime.fromNumber(candidats_2.reduce((acc, journey) => Math.min(acc, journey.departureTime), Number.MAX_SAFE_INTEGER) + 1);
+            time = RaptorTime.fromNumber(
+                candidats_2.reduce((acc, journey) => Math.min(acc, journey.departureTime), Number.MAX_SAFE_INTEGER) + 1,
+            );
         }
 
         const dominated: number[] = [];
@@ -180,7 +189,53 @@ export class Raptor {
                     continue;
                 }
 
-                if (journeys[i].departureTime >= journeys[j].departureTime && journeys[i].arrivalTime <= journeys[j].arrivalTime) {
+                if (
+                    journeys[i].departureTime >= journeys[j].departureTime &&
+                    journeys[i].arrivalTime <= journeys[j].arrivalTime
+                ) {
+                    dominated[j] ??= 0;
+                    dominated[j]++;
+                }
+            }
+        }
+
+        return journeys.filter((journey, i) => !dominated[i] || dominated[i] === 0);
+    }
+
+    public range(args: RangeArgs): Journey[] {
+        const journeys: Journey[] = [];
+
+        const sourceStopId = args.sourceStopId;
+        const targetStopId = args.targetStopId;
+        const date = RaptorDate.from(args.date);
+
+        const maxTime = RaptorTime.from('24:00:00');
+        let time = RaptorTime.from('00:00:00');
+
+        while (time.lt(maxTime)) {
+            const candidats_1 = this.plan({ sourceStopId, targetStopId, date, time });
+            const candidats_2 = candidats_1.filter((journey) => journey.departureTime <= maxTime.toNumber());
+
+            if (candidats_2.length === 0) break;
+
+            journeys.push(...candidats_2);
+            time = RaptorTime.fromNumber(
+                candidats_2.reduce((acc, journey) => Math.min(acc, journey.departureTime), Number.MAX_SAFE_INTEGER) + 1,
+            );
+        }
+
+        const dominated: number[] = [];
+
+        for (let i = 0; i < journeys.length; i++) {
+            for (let j = 0; j < journeys.length; j++) {
+                if (j === i) {
+                    continue;
+                }
+
+                if (
+                    journeys[i].departureTime >= journeys[j].departureTime &&
+                    journeys[i].arrivalTime <= journeys[j].arrivalTime
+                ) {
                     dominated[j] ??= 0;
                     dominated[j]++;
                 }
@@ -212,10 +267,8 @@ export class Raptor {
 
             bestArrivals[stopId] = Number.MAX_SAFE_INTEGER;
         }
-
         knownArrivals[0][sourceStopId] = time.toNumber();
         markedStopIds.add(sourceStopId);
-
         for (let k = 1; k < this.maxTransfers && markedStopIds.size > 0; k++) {
             // Accumulate routes serving marked stops from previous round
             const queue: Record<RouteId, StopId> = {};
@@ -234,7 +287,10 @@ export class Raptor {
 
                 markedStopIds.delete(markedStopId);
             }
-
+            const getElementsAfter = <T, U>(map: Map<T, U>, key: T): U[] => {
+                let found = false;
+                return [...map].filter(([k]) => found || (found = k === key)).map(([, v]) => v);
+            };
             // Travers each route
             for (const routeId in queue) {
                 let bestTripId: TripId | null = null;
@@ -242,10 +298,11 @@ export class Raptor {
                 let timeShift = 0;
 
                 const route = this.routesIdx[routeId];
-                const queueStopIdx = route.stops.findIndex((stop) => stop.stopId === queue[routeId]);
+                const stopsMap = new Map(route.stops.map((stop) => [stop.stopId, stop]));
+                //const queueStopIdx = route.stops.findIndex((stop) => stop.stopId === queue[routeId]);
+                //const stops = route.stops.slice(queueStopIdx);
 
-                const stops = route.stops.slice(queueStopIdx);
-
+                const stops = getElementsAfter(stopsMap, queue[routeId]);
                 for (const stop of stops) {
                     const stopId = stop.stopId;
                     const arrivalTime = this.getArrivalTime(routeId, bestTripId, stopId)?.toNumber() + timeShift;
@@ -288,7 +345,7 @@ export class Raptor {
                     if (
                         !bestTripId ||
                         knownArrivals[k - 1][stop.stopId] <=
-                        this.getDepartureTime(routeId, bestTripId, stopId)?.toNumber() + timeShift
+                            this.getDepartureTime(routeId, bestTripId, stopId)?.toNumber() + timeShift
                     ) {
                         [bestTripId, timeShift] = this.getEarliestTripId(
                             routeId,
@@ -300,7 +357,6 @@ export class Raptor {
                     }
                 }
             }
-
             // Look at footpaths
             for (const markedStopId of new Set(markedStopIds)) {
                 for (const targetStopId in this.footpaths[markedStopId] || {}) {
@@ -331,12 +387,164 @@ export class Raptor {
         return this.transformToJourney(connectionByStopId, targetStopId);
     }
 
+    public cPlan(args: PlanArgs): Journey[] {
+        const { sourceStopId, targetStopId, date, time } = args;
+        const raptorDate = RaptorDate.from(date);
+        const raptorTime = RaptorTime.from(time);
+
+        const connectionByStopId: ConnectionByStopId = {};
+        const knownArrivals: number[][] = Array(this.maxTransfers + 1)
+            .fill(null)
+            .map(() => new Array(Object.keys(this.stopsIdx).length).fill(Number.MAX_SAFE_INTEGER));
+        const bestArrivals: number[] = new Array(Object.keys(this.stopsIdx).length).fill(Number.MAX_SAFE_INTEGER);
+        let markedStopIds: Set<number> = new Set();
+
+        const stopIdToIndex: Map<string, number> = new Map();
+        const indexToStopId: string[] = [];
+        let index = 0;
+        for (const stopId in this.stopsIdx) {
+            stopIdToIndex.set(stopId, index);
+            indexToStopId[index] = stopId;
+            index++;
+        }
+
+        const sourceIndex = stopIdToIndex.get(sourceStopId)!;
+        const targetIndex = stopIdToIndex.get(targetStopId)!;
+
+        knownArrivals[0][sourceIndex] = raptorTime.toNumber();
+        markedStopIds.add(sourceIndex);
+
+        for (let k = 1; k < this.maxTransfers && markedStopIds.size > 0; k++) {
+            const queue = new Map<RouteId, number>();
+
+            // Accumulate routes serving marked stops from previous round
+            for (const markedStopIndex of markedStopIds) {
+                const markedStopId = indexToStopId[markedStopIndex];
+                for (const route of this.stopsIdx[markedStopId].routes) {
+                    const routeId = route.routeId;
+                    const currentQueuedStop = queue.get(routeId);
+                    if (
+                        currentQueuedStop === undefined ||
+                        this.isStopBefore(routeId, indexToStopId[currentQueuedStop], markedStopId)
+                    ) {
+                        queue.set(routeId, markedStopIndex);
+                    }
+                }
+            }
+
+            const newMarkedStopIds: Set<number> = new Set();
+
+            // Traverse each route
+            for (const [routeId, queueStopIndex] of queue) {
+                const route = this.routesIdx[routeId];
+                const stopIndices = route.stops.map((stop) => stopIdToIndex.get(stop.stopId)!);
+                const startIndex = stopIndices.indexOf(queueStopIndex);
+
+                let bestTripId: TripId | null = null;
+                let boardingIndex: number | null = null;
+                let timeShift = 0;
+
+                for (let i = startIndex; i < stopIndices.length; i++) {
+                    const stopIndex = stopIndices[i];
+                    const stopId = indexToStopId[stopIndex];
+                    const arrivalTime = bestTripId
+                        ? this.getArrivalTime(routeId, bestTripId, stopId)?.toNumber() + timeShift
+                        : Infinity;
+
+                    if (bestTripId && arrivalTime < Math.min(bestArrivals[stopIndex], bestArrivals[targetIndex])) {
+                        const departureTime =
+                            this.getDepartureTime(routeId, bestTripId, indexToStopId[boardingIndex!])?.toNumber() +
+                            timeShift;
+
+                        if (
+                            departureTime >=
+                            (connectionByStopId[indexToStopId[boardingIndex!]]?.[k - 1]?.departureTime ?? -Infinity)
+                        ) {
+                            knownArrivals[k][stopIndex] = arrivalTime;
+                            bestArrivals[stopIndex] = arrivalTime;
+                            newMarkedStopIds.add(stopIndex);
+
+                            connectionByStopId[stopId] ??= {};
+                            connectionByStopId[stopId][k] = {
+                                bestTripId,
+                                sourceStopId: indexToStopId[boardingIndex!],
+                                targetStopId: stopId,
+                                departureTime,
+                                arrivalTime,
+                            };
+                        }
+                    }
+
+                    const prevArrivalTime = knownArrivals[k - 1][stopIndex];
+                    if (
+                        !bestTripId ||
+                        prevArrivalTime <=
+                            (this.getDepartureTime(routeId, bestTripId, stopId)?.toNumber() ?? Infinity) + timeShift
+                    ) {
+                        [bestTripId, timeShift] = this.getEarliestTripId(
+                            routeId,
+                            stopId,
+                            raptorDate,
+                            RaptorTime.fromNumber(prevArrivalTime),
+                        );
+                        boardingIndex = stopIndex;
+                    }
+                }
+            }
+
+            // Process footpaths
+            for (const markedStopIndex of newMarkedStopIds) {
+                const markedStopId = indexToStopId[markedStopIndex];
+                const footpaths = this.footpaths[markedStopId] || {};
+                for (const targetStopId in footpaths) {
+                    const targetStopIndex = stopIdToIndex.get(targetStopId)!;
+                    const walkingTime = footpaths[targetStopId];
+                    const arrivalTime = Math.min(
+                        knownArrivals[k][targetStopIndex],
+                        knownArrivals[k][markedStopIndex] + walkingTime,
+                    );
+
+                    if (arrivalTime < bestArrivals[targetStopIndex]) {
+                        knownArrivals[k][targetStopIndex] = arrivalTime;
+                        bestArrivals[targetStopIndex] = arrivalTime;
+                        newMarkedStopIds.add(targetStopIndex);
+
+                        connectionByStopId[targetStopId] ??= {};
+                        connectionByStopId[targetStopId][k] = {
+                            sourceStopId: markedStopId,
+                            targetStopId: targetStopId,
+                            departureTime: arrivalTime - walkingTime,
+                            arrivalTime: arrivalTime,
+                        };
+                    }
+                }
+            }
+
+            markedStopIds = newMarkedStopIds;
+        }
+
+        return this.transformToJourney(connectionByStopId, targetStopId);
+    }
+
     // @todo: optimize search time by using index
     private isStopBefore(routeId: string, leftStopId: string, rightStopId: string): boolean {
+        // iterate through this array just once
         const route = this.routesIdx[routeId];
 
-        const leftStopIdx = route.stops.findIndex((stop) => stop.stopId === leftStopId);
-        const rightStopIdx = route.stops.findIndex((stop) => stop.stopId === rightStopId);
+        let leftStopIdx = -1;
+        let rightStopIdx = -1;
+
+        for (let i = 0; i < route.stops.length; i++) {
+            if (route.stops[i].stopId === leftStopId) {
+                leftStopIdx = i;
+            }
+            if (route.stops[i].stopId === rightStopId) {
+                rightStopIdx = i;
+            }
+            if (leftStopIdx !== -1 && rightStopIdx !== -1) {
+                break;
+            }
+        }
 
         return leftStopIdx < rightStopIdx;
     }
@@ -391,7 +599,6 @@ export class Raptor {
                             : best,
                     trips[0],
                 );
-
                 return [trip.tripId, i * 86400];
             }
 
@@ -400,7 +607,6 @@ export class Raptor {
             dayOfWeek = nextDate.getDayOfWeek();
             timeNumber = 0;
         }
-
         return [null, 0];
     }
 
@@ -447,7 +653,6 @@ export class Raptor {
                 arrivalTime: segments[segments.length - 1].arrivalTime,
             });
         }
-
         return journeys;
     }
 }
