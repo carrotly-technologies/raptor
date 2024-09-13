@@ -1,7 +1,7 @@
 import { DateString } from '@lib/gtfs/gtfs.types';
 
 export class RaptorDate {
-    constructor(private readonly date: number = 0) {}
+    constructor(private readonly date: number = 0) { }
 
     public static from(date: RaptorDate | string | number): RaptorDate {
         if (typeof date === 'number') {
@@ -35,5 +35,9 @@ export class RaptorDate {
 
     public getDayOfWeek(): string {
         return new Date(this.toString()).toLocaleDateString('en-US', { weekday: 'long' }).toLocaleLowerCase();
+    }
+
+    public getDayOfWeek_2(): number {
+        return new Date(this.toString()).getDay();
     }
 }
