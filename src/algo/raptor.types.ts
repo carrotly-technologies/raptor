@@ -41,15 +41,15 @@ export interface PlanArgs {
     time: RaptorTime | string | number;
 }
 
-type RouteIdx = number;
-type StopIdx = number;
-type StopTimeIdx = number;
-type TransferIdx = number;
-type RouteStopIdx = number;
-type StopRouteIdx = number;
-type RouteIdxToStopIdx = Array<number>;
+export type RouteIdx = number;
+export type StopIdx = number;
+export type StopTimeIdx = number;
+export type TransferIdx = number;
+export type RouteStopIdx = number;
+export type StopRouteIdx = number;
+export type RouteIdxToStopIdx = Array<number>;
 
-export interface Route_1 {
+export interface Route {
     routeId: RouteId;
     numberOfTrips: number;
     numberOfServices: number;
@@ -66,7 +66,7 @@ export interface StopTime_1 {
     departureTime: number;
 }
 
-export type RouteStop_1 = number;
+export type RouteStop = number;
 
 export interface Stop_1 {
     stopId: StopId;
@@ -76,14 +76,14 @@ export interface Stop_1 {
     firstTransferIdx: number;
 }
 
-export interface Transfer_1 {
+export interface Transfer {
     targetStopId: StopId;
     walkingTime: number;
 }
 
-export type StopRoute_1 = number;
+export type StopRoute = number;
 
-interface Service_1 {
+export interface Service {
     serviceId: ServiceId;
     startDate: number;
     endDate: number;

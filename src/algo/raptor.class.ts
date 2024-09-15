@@ -4,33 +4,35 @@ import {
     LoadArgs,
     PlanArgs,
     RangeArgs,
-    Route_1,
-    RouteStop_1,
+    Route,
+    RouteIdx,
+    RouteIdxToStopIdx,
+    RouteStop,
+    Service,
     Stop_1,
-    StopRoute_1,
+    StopIdx,
+    StopRoute,
     StopTime_1,
-    Transfer_1,
+    Transfer,
 } from '@lib/algo/raptor.types';
-import { RouteId, ServiceId, Stop, StopId, StopTime, Trip, TripId } from '@lib/gtfs/gtfs.types';
+import * as gtfs from '@lib/gtfs/gtfs.types';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
-import { Calendar } from 'dist/gtfs/gtfs.types';
-import { RouteIdx, RouteIdxToStopIdx, Service_1, StopIdx } from 'dist/main';
 
 export class Raptor {
     private maxRounds: number = 0;
     private maxDays: number = 0;
 
-    private routes: Route_1[] = [];
+    private routes: Route[] = [];
     private stopTimes: StopTime_1[] = [];
 
     private stops: Stop_1[] = [];
-    private transfers: Transfer_1[] = [];
+    private transfers: Transfer[] = [];
 
-    private routeStops: RouteStop_1[] = [];
-    private stopRoutes: StopRoute_1[] = [];
+    private routeStops: RouteStop[] = [];
+    private stopRoutes: StopRoute[] = [];
 
-    private services: Service_1[] = [];
+    private services: Service[] = [];
 
     private stopIdxByStopId: Array<number> = [];
 
@@ -40,7 +42,7 @@ export class Raptor {
 
         const stopTimes = [...args.stopTimes].sort((a, b) => Number(a['stop_sequence']) - Number(b['stop_sequence']));
 
-        const stopTimesByTripId = stopTimes.reduce<Record<TripId, StopTime[]>>((acc, stopTime) => {
+        const stopTimesByTripId = stopTimes.reduce<Record<gtfs.TripId, gtfs.StopTime[]>>((acc, stopTime) => {
             const tripId = stopTime['trip_id'];
 
             acc[tripId] ??= [];
@@ -49,7 +51,7 @@ export class Raptor {
             return acc;
         }, {});
 
-        const tripsByRouteId = args.trips.reduce<Record<RouteId, Trip[]>>((acc, trip) => {
+        const tripsByRouteId = args.trips.reduce<Record<gtfs.RouteId, gtfs.Trip[]>>((acc, trip) => {
             const stopTimes = stopTimesByTripId[trip['trip_id']] || [];
             if (stopTimes.length === 0) acc;
 
@@ -74,7 +76,7 @@ export class Raptor {
             });
         }
 
-        const transfersByStopId = args.transfers.reduce<Record<StopId, Transfer_1[]>>((acc, transfer) => {
+        const transfersByStopId = args.transfers.reduce<Record<gtfs.StopId, Transfer[]>>((acc, transfer) => {
             const sourceStopId = transfer['from_stop_id'];
             const targetStopId = transfer['to_stop_id'];
             const walkingTime = Number(transfer['min_transfer_time']);
@@ -85,12 +87,12 @@ export class Raptor {
             return acc;
         }, {});
 
-        const stopByStopId = args.stops.reduce<Record<StopId, Stop>>((acc, stop) => {
+        const stopByStopId = args.stops.reduce<Record<gtfs.StopId, gtfs.Stop>>((acc, stop) => {
             acc[stop['stop_id']] = stop;
             return acc;
         }, {});
 
-        const calendarDatesByServiceId = args.calendarDates.reduce<Record<ServiceId, Record<'1' | '2', number[]>>>(
+        const calendarDatesByServiceId = args.calendarDates.reduce<Record<gtfs.ServiceId, Record<'1' | '2', number[]>>>(
             (acc, calendarDate) => {
                 const serviceId = calendarDate['service_id'];
                 acc[serviceId] ??= { [1]: [], [2]: [] };
@@ -106,7 +108,7 @@ export class Raptor {
             {},
         );
 
-        const calendarByServiceId_2 = args.calendar.reduce<Record<ServiceId, Calendar>>((acc, calendar) => {
+        const calendarByServiceId_2 = args.calendar.reduce<Record<gtfs.ServiceId, gtfs.Calendar>>((acc, calendar) => {
             acc[calendar['service_id']] = calendar;
             return acc;
         }, {});
@@ -444,7 +446,7 @@ export class Raptor {
 
         for (
             let stopTimeIdx = route.firstTripIdx + routeStopIdx - route.firstRouteStopIdx,
-                serviceIdx = route.firstServiceIdx;
+            serviceIdx = route.firstServiceIdx;
             stopTimeIdx < route.firstTripIdx + route.numberOfTrips * route.numberOfRouteStops;
             stopTimeIdx += route.numberOfRouteStops, serviceIdx += 1
         ) {
