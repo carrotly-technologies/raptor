@@ -2,9 +2,7 @@ import { Raptor } from '@lib/algo/raptor.class';
 import { loadGTFS } from '@lib/gtfs/load-gtfs.function';
 import * as assert from 'node:assert';
 import * as path from 'node:path';
-import * as util from 'node:util';
 import { before, describe, it } from 'node:test';
-import { RaptorTime } from '@lib/utils/raptor-time.class';
 
 describe(Raptor.name, () => {
     let raptor: Raptor;
@@ -13,11 +11,11 @@ describe(Raptor.name, () => {
         const gtfs = loadGTFS(path.join(__dirname, '..', '..', 'etc'));
 
         raptor = new Raptor();
-        raptor.load({ ...gtfs, maxTransfers: 100, maxDays: 3 });
+        raptor.load({ ...gtfs, maxRounds: 10, maxDays: 3 });
     });
 
     it('should find a journey with zero transfers', (t) => {
-        const journeys = raptor.plan_v2({
+        const journeys = raptor.plan({
             sourceStopId: '1355067',
             targetStopId: '1014871',
             date: '2024-09-06',
@@ -42,7 +40,7 @@ describe(Raptor.name, () => {
     });
 
     it('should find a journey with one transfer', () => {
-        const journeys = raptor.plan_v2({
+        const journeys = raptor.plan({
             sourceStopId: '1355067',
             targetStopId: '824745',
             date: '2024-09-06',
@@ -57,21 +55,21 @@ describe(Raptor.name, () => {
                         sourceStopId: '1355067',
                         targetStopId: '1014871',
                         departureTime: 35700,
-                        arrivalTime: 36600
+                        arrivalTime: 36600,
                     },
                     {
                         tripId: undefined,
                         sourceStopId: '1014871',
                         targetStopId: '1536334',
                         departureTime: 36600,
-                        arrivalTime: 36781
+                        arrivalTime: 36781,
                     },
                     {
                         tripId: '21251520_7952',
                         sourceStopId: '1536334',
                         targetStopId: '824745',
                         departureTime: 42060,
-                        arrivalTime: 42780
+                        arrivalTime: 42780,
                     },
                 ],
                 departureTime: 35700,
@@ -81,7 +79,7 @@ describe(Raptor.name, () => {
     });
 
     it('should find a journey with two transfers', () => {
-        const journeys = raptor.plan_v2({
+        const journeys = raptor.plan({
             sourceStopId: '1491097',
             targetStopId: '1450499',
             date: '2024-09-14',
@@ -95,7 +93,7 @@ describe(Raptor.name, () => {
     });
 
     it('should find a journey with three transfers', () => {
-        const journeys = raptor.plan_v2({
+        const journeys = raptor.plan({
             sourceStopId: '1491097',
             targetStopId: '80416',
             date: '2024-09-14',
@@ -114,7 +112,7 @@ describe(Raptor.name, () => {
     });
 
     it('should find a journey with four transfers', () => {
-        const journeys = raptor.plan_v2({
+        const journeys = raptor.plan({
             sourceStopId: '1491097',
             targetStopId: '1450689',
             date: '2024-09-14',
@@ -133,7 +131,7 @@ describe(Raptor.name, () => {
     });
 
     it('should find a journey with five transfers', () => {
-        const journeys = raptor.plan_v2({
+        const journeys = raptor.plan({
             sourceStopId: '824788',
             targetStopId: '1606200',
             date: '2024-09-14',
@@ -151,7 +149,7 @@ describe(Raptor.name, () => {
         assert.equal(journeys[1].arrivalTime, 88200);
     });
 
-    it.skip('should find a journeys in range', () => {
+    it('should find a journeys in range', () => {
         const journeys = raptor.range({
             sourceStopId: '1014894',
             targetStopId: '1450689',

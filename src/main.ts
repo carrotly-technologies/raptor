@@ -6,7 +6,6 @@ import { RaptorTime } from '@lib/utils/raptor-time.class';
 import { Journey } from 'dist/algo/raptor.types';
 import { GTFS } from 'dist/gtfs/gtfs.types';
 import * as path from 'node:path';
-import * as util from 'node:util';
 
 const bootstrap = () => {
     const gtfs = loadGTFS(path.join(__dirname, '..', 'etc'));
@@ -14,39 +13,13 @@ const bootstrap = () => {
     const raptor = new Raptor();
 
     console.time('Loading phase');
-    raptor.load({ ...gtfs, maxTransfers: 20, maxDays: 2 });
+    raptor.load({ ...gtfs, maxRounds: 10, maxDays: 2 });
     console.timeEnd('Loading phase');
-    console.log('')
-
-    console.time('Plan V2');
-    const v2 = raptor.plan_v2({
-        sourceStopId: '1491097',
-        targetStopId: '1450499',
-        date: '2024-09-14',
-        time: '12:00:00',
-    });
-    console.timeEnd('Plan V2');
-
-    print(v2, gtfs);
-    console.log('')
-
-    console.time('Plan V1');
-    const v1 = raptor.plan_v1({
-        sourceStopId: '1491097',
-        targetStopId: '1450499',
-        date: '2024-09-14',
-        time: '12:00:00',
-    });
-    console.timeEnd('Plan V1');
-
-    print(v1, gtfs);
-
-
-    return;
+    console.log('');
 
     console.time('Zero transfers');
     for (let i = 0; i < 5; i++) {
-        raptor.plan_v2({
+        raptor.plan({
             sourceStopId: '1355067',
             targetStopId: '1014871',
             date: '2024-09-06',
@@ -57,7 +30,7 @@ const bootstrap = () => {
 
     console.time('One transfer');
     for (let i = 0; i < 5; i++) {
-        raptor.plan_v2({
+        raptor.plan({
             sourceStopId: '1355067',
             targetStopId: '824745',
             date: '2024-09-06',
@@ -68,7 +41,7 @@ const bootstrap = () => {
 
     console.time('Two transfers');
     for (let i = 0; i < 5; i++) {
-        raptor.plan_v2({
+        raptor.plan({
             sourceStopId: '1491097',
             targetStopId: '1450499',
             date: '2024-09-14',
@@ -79,7 +52,7 @@ const bootstrap = () => {
 
     console.time('Three transfers');
     for (let i = 0; i < 5; i++) {
-        raptor.plan_v2({
+        raptor.plan({
             sourceStopId: '1491097',
             targetStopId: '80416',
             date: '2024-09-14',
@@ -90,7 +63,7 @@ const bootstrap = () => {
 
     console.time('Four transfers');
     for (let i = 0; i < 5; i++) {
-        raptor.plan_v2({
+        raptor.plan({
             sourceStopId: '1491097',
             targetStopId: '1450689',
             date: '2024-09-14',
@@ -101,7 +74,7 @@ const bootstrap = () => {
 
     console.time('Five transfers');
     for (let i = 0; i < 5; i++) {
-        raptor.plan_v2({
+        raptor.plan({
             sourceStopId: '824788',
             targetStopId: '1606200',
             date: '2024-09-14',
@@ -121,13 +94,17 @@ const bootstrap = () => {
     console.timeEnd('Range query');
 
     // console.log('Journeys found:', journeys.length);
-
-
 };
 
 const print = (journeys: Journey[], gtfs: GTFS) => {
     journeys.forEach((journey, i) => {
-        console.log(`Journey #${i + 1} | ${RaptorTime.from(journey.departureTime % 86400).toString().slice(0, 5)} - ${RaptorTime.from(journey.arrivalTime % 86400).toString().slice(0, 5)}`);
+        console.log(
+            `Journey #${i + 1} | ${RaptorTime.from(journey.departureTime % 86400)
+                .toString()
+                .slice(0, 5)} - ${RaptorTime.from(journey.arrivalTime % 86400)
+                .toString()
+                .slice(0, 5)}`,
+        );
 
         journey.segments.forEach((segment) => {
             const tripId = segment.tripId;
@@ -164,6 +141,6 @@ const print = (journeys: Journey[], gtfs: GTFS) => {
             }
         });
     });
-}
+};
 
 bootstrap();
