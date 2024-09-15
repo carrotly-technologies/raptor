@@ -2,9 +2,7 @@ import { Raptor } from '@lib/algo/raptor.class';
 import { loadGTFS } from '@lib/gtfs/load-gtfs.function';
 import * as assert from 'node:assert';
 import * as path from 'node:path';
-import * as util from 'node:util';
 import { before, describe, it } from 'node:test';
-import { RaptorTime } from '@lib/utils/raptor-time.class';
 
 describe(Raptor.name, () => {
     let raptor: Raptor;
@@ -13,7 +11,7 @@ describe(Raptor.name, () => {
         const gtfs = loadGTFS(path.join(__dirname, '..', '..', 'etc'));
 
         raptor = new Raptor();
-        raptor.load({ ...gtfs, maxTransfers: 100, maxDays: 3 });
+        raptor.load({ ...gtfs, maxRounds: 10, maxDays: 3 });
     });
 
     it('should find a journey with zero transfers', (t) => {
@@ -57,21 +55,21 @@ describe(Raptor.name, () => {
                         sourceStopId: '1355067',
                         targetStopId: '1014871',
                         departureTime: 35700,
-                        arrivalTime: 36600
+                        arrivalTime: 36600,
                     },
                     {
                         tripId: undefined,
                         sourceStopId: '1014871',
                         targetStopId: '1536334',
                         departureTime: 36600,
-                        arrivalTime: 36781
+                        arrivalTime: 36781,
                     },
                     {
                         tripId: '21251520_7952',
                         sourceStopId: '1536334',
                         targetStopId: '824745',
                         departureTime: 42060,
-                        arrivalTime: 42780
+                        arrivalTime: 42780,
                     },
                 ],
                 departureTime: 35700,
@@ -80,48 +78,75 @@ describe(Raptor.name, () => {
         ]);
     });
 
-    it.skip('should find a journey with two transfers', () => {
+    it('should find a journey with two transfers', () => {
         const journeys = raptor.plan({
-            sourceStopId: '???',
-            targetStopId: '???',
-            date: '???',
-            time: '???',
+            sourceStopId: '1491097',
+            targetStopId: '1450499',
+            date: '2024-09-14',
+            time: '12:00:00',
         });
 
-        assert.deepStrictEqual(journeys, []);
+        assert.equal(journeys.length, 1);
+
+        assert.equal(journeys[0].departureTime, 43860);
+        assert.equal(journeys[0].arrivalTime, 70080);
     });
 
-    it.skip('should find a journey with three transfers', () => {
+    it('should find a journey with three transfers', () => {
         const journeys = raptor.plan({
-            sourceStopId: '1014894',
+            sourceStopId: '1491097',
+            targetStopId: '80416',
+            date: '2024-09-14',
+            time: '12:00:00',
+        });
+
+        assert.equal(journeys.length, 2);
+
+        assert.equal(journeys[0].segments.length, 5);
+        assert.equal(journeys[0].departureTime, 43860);
+        assert.equal(journeys[0].arrivalTime, 113340);
+
+        assert.equal(journeys[1].segments.length, 6);
+        assert.equal(journeys[1].departureTime, 43860);
+        assert.equal(journeys[1].arrivalTime, 75780);
+    });
+
+    it('should find a journey with four transfers', () => {
+        const journeys = raptor.plan({
+            sourceStopId: '1491097',
             targetStopId: '1450689',
-            date: '2024-09-06',
-            time: '13:30:00',
+            date: '2024-09-14',
+            time: '12:00:00',
         });
 
-        assert.deepStrictEqual(journeys, []);
+        assert.equal(journeys.length, 2);
+
+        assert.equal(journeys[0].segments.length, 7);
+        assert.equal(journeys[0].departureTime, 43860);
+        assert.equal(journeys[0].arrivalTime, 123900);
+
+        assert.equal(journeys[1].segments.length, 8);
+        assert.equal(journeys[1].departureTime, 43860);
+        assert.equal(journeys[1].arrivalTime, 87000);
     });
 
-    it.skip('should find a journey with four transfers', () => {
+    it('should find a journey with five transfers', () => {
         const journeys = raptor.plan({
-            sourceStopId: '1014894',
-            targetStopId: '1450689',
-            date: '2024-09-06',
-            time: '17:15:00',
+            sourceStopId: '824788',
+            targetStopId: '1606200',
+            date: '2024-09-14',
+            time: '10:00:00',
         });
 
-        assert.deepStrictEqual(journeys, []);
-    });
+        assert.equal(journeys.length, 2);
 
-    it.skip('should find a journey with five transfers', () => {
-        const journeys = raptor.plan({
-            sourceStopId: '???',
-            targetStopId: '???',
-            date: '???',
-            time: '???',
-        });
+        assert.equal(journeys[0].segments.length, 8);
+        assert.equal(journeys[0].departureTime, 41820);
+        assert.equal(journeys[0].arrivalTime, 125100);
 
-        assert.deepStrictEqual(journeys, []);
+        assert.equal(journeys[1].segments.length, 9);
+        assert.equal(journeys[1].departureTime, 41820);
+        assert.equal(journeys[1].arrivalTime, 88200);
     });
 
     it('should find a journeys in range', () => {

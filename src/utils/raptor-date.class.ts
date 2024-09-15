@@ -33,7 +33,7 @@ export class RaptorDate {
         return this.date;
     }
 
-    public getDayOfWeek(): string {
-        return new Date(this.toString()).toLocaleDateString('en-US', { weekday: 'long' }).toLocaleLowerCase();
+    public getDayOfWeek(): number {
+        return new Date(this.toString()).getDay();
     }
 }

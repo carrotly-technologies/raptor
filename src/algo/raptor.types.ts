@@ -3,6 +3,7 @@ import {
     CalendarDate,
     Route,
     RouteId,
+    ServiceId,
     Stop,
     StopId,
     StopTime,
@@ -21,7 +22,7 @@ export interface LoadArgs {
     calendar: Calendar[];
     calendarDates: CalendarDate[];
     transfers: Transfer[];
-    maxTransfers?: number;
+    maxRounds?: number;
     maxDays?: number;
     maxWalkingTime?: number;
     walkingSpeed?: number;
@@ -40,80 +41,65 @@ export interface PlanArgs {
     time: RaptorTime | string | number;
 }
 
-export type RouteIndex = {
+export type RouteIdx = number;
+export type StopIdx = number;
+export type StopTimeIdx = number;
+export type TransferIdx = number;
+export type RouteStopIdx = number;
+export type StopRouteIdx = number;
+export type RouteIdxToStopIdx = Array<number>;
+
+export interface Route {
     routeId: RouteId;
-    // --- temporary: start ---
-    tripByTripId: Record<
-        TripId,
-        {
-            service: {
-                startDate: number;
-                endDate: number;
-                monday: boolean;
-                tuesday: boolean;
-                wednesday: boolean;
-                thursday: boolean;
-                friday: boolean;
-                saturday: boolean;
-                sunday: boolean;
-                exclude: number[];
-                include: number[];
-            };
-            stopTimeByStopId: Record<
-                StopId,
-                {
-                    arrivalTime: RaptorTime;
-                    departureTime: RaptorTime;
-                }
-            >;
-        }
-    >;
-    // --- temporary: end ---
-    trips: {
-        tripId: TripId;
-        service: {
-            startDate: number;
-            endDate: number;
-            monday: boolean;
-            tuesday: boolean;
-            wednesday: boolean;
-            thursday: boolean;
-            friday: boolean;
-            saturday: boolean;
-            sunday: boolean;
-            exclude: number[];
-            include: number[];
-        };
-        stopTimes: {
-            stopId: StopId;
-            arrivalTime: RaptorTime;
-            departureTime: RaptorTime;
-        }[];
-    }[];
-    stops: {
-        stopId: StopId;
-        stopLat: number;
-        stopLon: number;
-    }[];
-};
+    numberOfTrips: number;
+    numberOfServices: number;
+    numberOfRouteStops: number;
+    firstTripIdx: number;
+    firstServiceIdx: number;
+    firstRouteStopIdx: number;
+}
 
-export type StopIndex = {
+export interface StopTime_1 {
+    tripId: TripId;
     stopId: StopId;
-    routes: { routeId: RouteId }[];
-};
+    arrivalTime: number;
+    departureTime: number;
+}
 
-export type ConnectionByStopId = Record<
-    StopId,
-    Record<
-        number,
-        {
-            bestTripId?: TripId;
-            sourceStopId: StopId;
-            targetStopId: StopId;
-            arrivalTime?: number;
-            departureTime?: number;
-        }
-    >
+export type RouteStop = number;
+
+export interface Stop_1 {
+    stopId: StopId;
+    numberOfStopRoutes: number;
+    numberOfTransfers: number;
+    firstStopRouteIdx: number;
+    firstTransferIdx: number;
+}
+
+export interface Transfer {
+    targetStopId: StopId;
+    walkingTime: number;
+}
+
+export type StopRoute = number;
+
+export interface Service {
+    serviceId: ServiceId;
+    startDate: number;
+    endDate: number;
+    dayOfWeek: Array<boolean>;
+    exclude: Array<boolean>;
+    include: Array<boolean>;
+}
+
+export type ConnectionsByStopIdx = Array<
+    Array<{
+        tripId?: TripId;
+        sourceStopIdx: StopIdx;
+        targetStopIdx: StopIdx;
+        departureTime: number;
+        arrivalTime: number;
+    }>
 >;
 
 export interface Journey {
