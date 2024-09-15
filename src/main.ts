@@ -15,7 +15,6 @@ const bootstrap = () => {
     console.time('Loading phase');
     raptor.load({ ...gtfs, maxRounds: 10, maxDays: 2 });
     console.timeEnd('Loading phase');
-    console.log('');
 
     console.time('Zero transfers');
     for (let i = 0; i < 5; i++) {
@@ -92,8 +91,6 @@ const bootstrap = () => {
         });
     }
     console.timeEnd('Range query');
-
-    // console.log('Journeys found:', journeys.length);
 };
 
 const print = (journeys: Journey[], gtfs: GTFS) => {
@@ -102,8 +99,8 @@ const print = (journeys: Journey[], gtfs: GTFS) => {
             `Journey #${i + 1} | ${RaptorTime.from(journey.departureTime % 86400)
                 .toString()
                 .slice(0, 5)} - ${RaptorTime.from(journey.arrivalTime % 86400)
-                .toString()
-                .slice(0, 5)}`,
+                    .toString()
+                    .slice(0, 5)}`,
         );
 
         journey.segments.forEach((segment) => {

@@ -337,11 +337,6 @@ export class Raptor {
                             this.stopTimes[boardingTripIdx + boardingRouteStopIdx - route.firstRouteStopIdx]
                                 .departureTime + timeShift;
                         const boardingStopIdx = this.routeStops[boardingRouteStopIdx];
-
-                        if (departureTime < connectionsByStopIdx[boardingStopIdx]?.[round - 1]?.departureTime) {
-                            continue;
-                        }
-
                         const tripId = this.stopTimes[boardingTripIdx].tripId;
 
                         knownArrivals[round][stopIdx] = arrivalTime;
@@ -464,10 +459,9 @@ export class Raptor {
                 }
             }
         }
-
         // @fixme: date + 1 is not correct, it will not work for the last day of the month
         return retry > 0
-            ? this.getEarliestBoardingStopTimeIdx(routeIdx, routeStopIdx, date + 1, (dayOfWeek + 1) % 7, 0, retry - 1)
+            ? this.getEarliestBoardingStopTimeIdx(routeIdx, routeStopIdx, date + 1, (dayOfWeek + 1) % 7, Math.max(0, time - 86400), retry - 1)
             : [null, 0];
     }
 
