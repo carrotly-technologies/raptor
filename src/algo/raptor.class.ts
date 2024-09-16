@@ -9,10 +9,10 @@ import {
     RouteIdxToStopIdx,
     RouteStop,
     Service,
-    Stop_1,
+    Stop,
     StopIdx,
     StopRoute,
-    StopTime_1,
+    StopTime,
     Transfer,
 } from '@lib/algo/raptor.types';
 import * as gtfs from '@lib/gtfs/gtfs.types';
@@ -24,9 +24,9 @@ export class Raptor {
     private maxDays: number = 0;
 
     private routes: Route[] = [];
-    private stopTimes: StopTime_1[] = [];
+    private stopTimes: StopTime[] = [];
 
-    private stops: Stop_1[] = [];
+    private stops: Stop[] = [];
     private transfers: Transfer[] = [];
 
     private routeStops: RouteStop[] = [];
@@ -108,7 +108,7 @@ export class Raptor {
             {},
         );
 
-        const calendarByServiceId_2 = args.calendar.reduce<Record<gtfs.ServiceId, gtfs.Calendar>>((acc, calendar) => {
+        const calendarByServiceId = args.calendar.reduce<Record<gtfs.ServiceId, gtfs.Calendar>>((acc, calendar) => {
             acc[calendar['service_id']] = calendar;
             return acc;
         }, {});
@@ -135,7 +135,7 @@ export class Raptor {
                     });
                 });
 
-                const calendar = calendarByServiceId_2[trip['service_id']];
+                const calendar = calendarByServiceId[trip['service_id']];
                 const calendarDates = calendarDatesByServiceId[trip['service_id']] || {};
 
                 const include: Array<boolean> = [];
@@ -441,7 +441,7 @@ export class Raptor {
 
         for (
             let stopTimeIdx = route.firstTripIdx + routeStopIdx - route.firstRouteStopIdx,
-                serviceIdx = route.firstServiceIdx;
+            serviceIdx = route.firstServiceIdx;
             stopTimeIdx < route.firstTripIdx + route.numberOfTrips * route.numberOfRouteStops;
             stopTimeIdx += route.numberOfRouteStops, serviceIdx += 1
         ) {
@@ -462,13 +462,13 @@ export class Raptor {
         // @fixme: date + 1 is not correct, it will not work for the last day of the month
         return retry > 0
             ? this.getEarliestBoardingStopTimeIdx(
-                  routeIdx,
-                  routeStopIdx,
-                  date + 1,
-                  (dayOfWeek + 1) % 7,
-                  Math.max(0, time - 86400),
-                  retry - 1,
-              )
+                routeIdx,
+                routeStopIdx,
+                date + 1,
+                (dayOfWeek + 1) % 7,
+                Math.max(0, time - 86400),
+                retry - 1,
+            )
             : [null, 0];
     }
 

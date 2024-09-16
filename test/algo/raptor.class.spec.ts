@@ -1,5 +1,5 @@
 import { Raptor } from '@lib/algo/raptor.class';
-import { loadGTFS } from '@lib/gtfs/load-gtfs.function';
+import { GtfsLoader } from '@lib/gtfs/gtfs-loader.class';
 import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { before, describe, it } from 'node:test';
@@ -8,10 +8,11 @@ describe(Raptor.name, () => {
     let raptor: Raptor;
 
     before(() => {
-        const gtfs = loadGTFS(path.join(__dirname, '..', '..', 'etc'));
+        const loader = new GtfsLoader();
+        const gtfs = loader.load(path.join(__dirname, '..', '..', 'etc'));
 
         raptor = new Raptor();
-        raptor.load({ ...gtfs, maxRounds: 10, maxDays: 1 });
+        raptor.load({ ...gtfs, maxRounds: 6, maxDays: 1 });
     });
 
     describe('journeys with at least 0 transfers', () => {

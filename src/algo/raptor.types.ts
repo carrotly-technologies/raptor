@@ -1,27 +1,15 @@
-import {
-    Calendar,
-    CalendarDate,
-    Route,
-    RouteId,
-    ServiceId,
-    Stop,
-    StopId,
-    StopTime,
-    Transfer,
-    Trip,
-    TripId,
-} from '@lib/gtfs/gtfs.types';
+import * as gtfs from '@lib/gtfs/gtfs.types';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
 
 export interface LoadArgs {
-    stops: Stop[];
-    trips: Trip[];
-    routes: Route[];
-    stopTimes: StopTime[];
-    calendar: Calendar[];
-    calendarDates: CalendarDate[];
-    transfers: Transfer[];
+    stops: gtfs.Stop[];
+    trips: gtfs.Trip[];
+    routes: gtfs.Route[];
+    stopTimes: gtfs.StopTime[];
+    calendar: gtfs.Calendar[];
+    calendarDates: gtfs.CalendarDate[];
+    transfers: gtfs.Transfer[];
     maxRounds?: number;
     maxDays?: number;
     maxWalkingTime?: number;
@@ -29,14 +17,14 @@ export interface LoadArgs {
 }
 
 export interface RangeArgs {
-    sourceStopId: StopId;
-    targetStopId: StopId;
+    sourceStopId: gtfs.StopId;
+    targetStopId: gtfs.StopId;
     date: RaptorDate | string | number;
 }
 
 export interface PlanArgs {
-    sourceStopId: StopId;
-    targetStopId: StopId;
+    sourceStopId: gtfs.StopId;
+    targetStopId: gtfs.StopId;
     date: RaptorDate | string | number;
     time: RaptorTime | string | number;
 }
@@ -50,7 +38,7 @@ export type StopRouteIdx = number;
 export type RouteIdxToStopIdx = Array<number>;
 
 export interface Route {
-    routeId: RouteId;
+    routeId: gtfs.RouteId;
     numberOfTrips: number;
     numberOfServices: number;
     numberOfRouteStops: number;
@@ -59,17 +47,17 @@ export interface Route {
     firstRouteStopIdx: number;
 }
 
-export interface StopTime_1 {
-    tripId: TripId;
-    stopId: StopId;
+export interface StopTime {
+    tripId: gtfs.TripId;
+    stopId: gtfs.StopId;
     arrivalTime: number;
     departureTime: number;
 }
 
 export type RouteStop = number;
 
-export interface Stop_1 {
-    stopId: StopId;
+export interface Stop {
+    stopId: gtfs.StopId;
     numberOfStopRoutes: number;
     numberOfTransfers: number;
     firstStopRouteIdx: number;
@@ -77,14 +65,14 @@ export interface Stop_1 {
 }
 
 export interface Transfer {
-    targetStopId: StopId;
+    targetStopId: gtfs.StopId;
     walkingTime: number;
 }
 
 export type StopRoute = number;
 
 export interface Service {
-    serviceId: ServiceId;
+    serviceId: gtfs.ServiceId;
     startDate: number;
     endDate: number;
     dayOfWeek: Array<boolean>;
@@ -94,7 +82,7 @@ export interface Service {
 
 export type ConnectionsByStopIdx = Array<
     Array<{
-        tripId?: TripId;
+        tripId?: gtfs.TripId;
         sourceStopIdx: StopIdx;
         targetStopIdx: StopIdx;
         departureTime: number;
@@ -104,9 +92,9 @@ export type ConnectionsByStopIdx = Array<
 
 export interface Journey {
     segments: {
-        tripId?: TripId;
-        sourceStopId: StopId;
-        targetStopId: StopId;
+        tripId?: gtfs.TripId;
+        sourceStopId: gtfs.StopId;
+        targetStopId: gtfs.StopId;
         arrivalTime: number;
         departureTime: number;
     }[];

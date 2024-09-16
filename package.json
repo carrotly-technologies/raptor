@@ -1,10 +1,9 @@
 {
   "name": "@carrotly-technologies/raptor",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Round-Based Public Transit Routing",
   "author": "Carrotly Technologies <contact@carrotly.tech>",
-  "license": "UNLICENSED",
-  "private": true,
+  "license": "MIT",
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
   "files": [
@@ -21,7 +20,13 @@
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "node --require @swc-node/register --test ./test/**/*.spec.ts ",
     "test:watch": "node --watch --require @swc-node/register --test ./test/**/*.spec.ts",
-    "cmd:create-transfers": "node dist/cmd/create-transfers.command.js"
+    "cmd:create-transfers": "node dist/cmd/create-transfers.command.js",
+    "cmd:plan-query": "node dist/cmd/plan-query.command.js",
+    "cmd:range-query": "node dist/cmd/range-query.command.js",
+    "release": "yarn version --message 'Release package v%s'",
+    "release:patch": "yarn release --patch",
+    "release:minor": "yarn release --minor",
+    "release:major": "yarn release --major"
   },
   "dependencies": {},
   "devDependencies": {
@@ -30,6 +35,7 @@
     "@swc/core": "1.7.26",
     "@types/node": "22.5.4",
     "chokidar": "4.0.0",
+    "commit-and-tag-version": "12.4.4",
     "eslint": "9.10.0",
     "eslint-config-prettier": "9.1.0",
     "eslint-plugin-prettier": "5.2.1",
