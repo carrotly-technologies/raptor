@@ -9,10 +9,10 @@ import {
     RouteIdxToStopIdx,
     RouteStop,
     Service,
-    Stop_1,
+    Stop,
     StopIdx,
     StopRoute,
-    StopTime_1,
+    StopTime,
     Transfer,
 } from '@lib/algo/raptor.types';
 import * as gtfs from '@lib/gtfs/gtfs.types';
@@ -24,9 +24,9 @@ export class Raptor {
     private maxDays: number = 0;
 
     private routes: Route[] = [];
-    private stopTimes: StopTime_1[] = [];
+    private stopTimes: StopTime[] = [];
 
-    private stops: Stop_1[] = [];
+    private stops: Stop[] = [];
     private transfers: Transfer[] = [];
 
     private routeStops: RouteStop[] = [];
