@@ -1,10 +1,10 @@
 export * from '@lib/algo/raptor.class';
 
 import { Raptor } from '@lib/algo/raptor.class';
+import { Journey } from '@lib/algo/raptor.types';
+import { GTFS } from '@lib/gtfs/gtfs.types';
 import { loadGTFS } from '@lib/gtfs/load-gtfs.function';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
-import { Journey } from 'dist/algo/raptor.types';
-import { GTFS } from 'dist/gtfs/gtfs.types';
 import * as path from 'node:path';
 
 const bootstrap = () => {
@@ -13,84 +13,95 @@ const bootstrap = () => {
     const raptor = new Raptor();
 
     console.time('Loading phase');
-    raptor.load({ ...gtfs, maxRounds: 10, maxDays: 2 });
+    raptor.load({ ...gtfs, maxRounds: 10, maxDays: 1 });
     console.timeEnd('Loading phase');
 
-    console.time('Zero transfers');
-    for (let i = 0; i < 5; i++) {
-        raptor.plan({
-            sourceStopId: '1355067',
-            targetStopId: '1014871',
-            date: '2024-09-06',
-            time: '09:00:00',
-        });
-    }
-    console.timeEnd('Zero transfers');
-
-    console.time('One transfer');
-    for (let i = 0; i < 5; i++) {
-        raptor.plan({
-            sourceStopId: '1355067',
-            targetStopId: '824745',
-            date: '2024-09-06',
-            time: '09:00:00',
-        });
-    }
-    console.timeEnd('One transfer');
-
-    console.time('Two transfers');
-    for (let i = 0; i < 5; i++) {
-        raptor.plan({
-            sourceStopId: '1491097',
-            targetStopId: '1450499',
-            date: '2024-09-14',
-            time: '12:00:00',
-        });
-    }
-    console.timeEnd('Two transfers');
-
-    console.time('Three transfers');
-    for (let i = 0; i < 5; i++) {
-        raptor.plan({
-            sourceStopId: '1491097',
-            targetStopId: '80416',
-            date: '2024-09-14',
-            time: '12:00:00',
-        });
-    }
-    console.timeEnd('Three transfers');
-
-    console.time('Four transfers');
-    for (let i = 0; i < 5; i++) {
-        raptor.plan({
-            sourceStopId: '1491097',
-            targetStopId: '1450689',
-            date: '2024-09-14',
-            time: '12:00:00',
-        });
-    }
-    console.timeEnd('Four transfers');
-
-    console.time('Five transfers');
-    for (let i = 0; i < 5; i++) {
-        raptor.plan({
-            sourceStopId: '824788',
-            targetStopId: '1606200',
-            date: '2024-09-14',
-            time: '10:00:00',
-        });
-    }
-    console.timeEnd('Five transfers');
-
     console.time('Range query');
-    for (let i = 0; i < 5; i++) {
-        raptor.range({
-            sourceStopId: '1014894',
-            targetStopId: '1450689',
-            date: '2024-09-13',
-        });
-    }
+    const journeys = raptor.plan({
+        sourceStopId: '1657838',
+        targetStopId: '824788',
+        date: '2024-09-20',
+        time: '14:00:00',
+    });
     console.timeEnd('Range query');
+
+    print(journeys, gtfs);
+
+    // console.time('Zero transfers');
+    // for (let i = 0; i < 5; i++) {
+    //     raptor.plan({
+    //         sourceStopId: '1355067',
+    //         targetStopId: '1014871',
+    //         date: '2024-09-06',
+    //         time: '09:00:00',
+    //     });
+    // }
+    // console.timeEnd('Zero transfers');
+
+    // console.time('One transfer');
+    // for (let i = 0; i < 5; i++) {
+    //     raptor.plan({
+    //         sourceStopId: '1355067',
+    //         targetStopId: '824745',
+    //         date: '2024-09-06',
+    //         time: '09:00:00',
+    //     });
+    // }
+    // console.timeEnd('One transfer');
+
+    // console.time('Two transfers');
+    // for (let i = 0; i < 5; i++) {
+    //     raptor.plan({
+    //         sourceStopId: '1491097',
+    //         targetStopId: '1450499',
+    //         date: '2024-09-14',
+    //         time: '12:00:00',
+    //     });
+    // }
+    // console.timeEnd('Two transfers');
+
+    // console.time('Three transfers');
+    // for (let i = 0; i < 5; i++) {
+    //     raptor.plan({
+    //         sourceStopId: '1491097',
+    //         targetStopId: '80416',
+    //         date: '2024-09-14',
+    //         time: '12:00:00',
+    //     });
+    // }
+    // console.timeEnd('Three transfers');
+
+    // console.time('Four transfers');
+    // for (let i = 0; i < 5; i++) {
+    //     raptor.plan({
+    //         sourceStopId: '1491097',
+    //         targetStopId: '1450689',
+    //         date: '2024-09-14',
+    //         time: '12:00:00',
+    //     });
+    // }
+    // console.timeEnd('Four transfers');
+
+    // console.time('Five transfers');
+    // for (let i = 0; i < 5; i++) {
+    //     raptor.plan({
+    //         sourceStopId: '824788',
+    //         targetStopId: '1606200',
+    //         date: '2024-09-14',
+    //         time: '10:00:00',
+    //     });
+    // }
+    // console.timeEnd('Five transfers');
+
+    // console.time('Range query');
+    // for (let i = 0; i < 5; i++) {
+    //     raptor.range({
+    //         sourceStopId: '1014894',
+    //         targetStopId: '1450689',
+    //         date: '2024-09-13',
+    //     });
+    // }
+    // console.timeEnd('Range query');
 };
 
 const print = (journeys: Journey[], gtfs: GTFS) => {
@@ -99,8 +110,8 @@ const print = (journeys: Journey[], gtfs: GTFS) => {
             `Journey #${i + 1} | ${RaptorTime.from(journey.departureTime % 86400)
                 .toString()
                 .slice(0, 5)} - ${RaptorTime.from(journey.arrivalTime % 86400)
-                    .toString()
-                    .slice(0, 5)}`,
+                .toString()
+                .slice(0, 5)}`,
         );
 
         journey.segments.forEach((segment) => {

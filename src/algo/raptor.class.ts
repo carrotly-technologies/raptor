@@ -441,7 +441,7 @@ export class Raptor {
 
         for (
             let stopTimeIdx = route.firstTripIdx + routeStopIdx - route.firstRouteStopIdx,
-            serviceIdx = route.firstServiceIdx;
+                serviceIdx = route.firstServiceIdx;
             stopTimeIdx < route.firstTripIdx + route.numberOfTrips * route.numberOfRouteStops;
             stopTimeIdx += route.numberOfRouteStops, serviceIdx += 1
         ) {
@@ -461,7 +461,14 @@ export class Raptor {
         }
         // @fixme: date + 1 is not correct, it will not work for the last day of the month
         return retry > 0
-            ? this.getEarliestBoardingStopTimeIdx(routeIdx, routeStopIdx, date + 1, (dayOfWeek + 1) % 7, Math.max(0, time - 86400), retry - 1)
+            ? this.getEarliestBoardingStopTimeIdx(
+                  routeIdx,
+                  routeStopIdx,
+                  date + 1,
+                  (dayOfWeek + 1) % 7,
+                  Math.max(0, time - 86400),
+                  retry - 1,
+              )
             : [null, 0];
     }
 
