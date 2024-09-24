@@ -3,11 +3,23 @@
   "version": "0.1.0",
   "description": "Round-Based Public Transit Routing",
   "author": "Carrotly Technologies <contact@carrotly.tech>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/carrotly-technologies/raptor.git"
+  },
   "license": "MIT",
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
   "files": [
     "dist/**/*"
+  ],
+  "keywords": [
+    "transit",
+    "routing",
+    "public transit",
+    "routing engine",
+    "raptor",
+    "gtfs"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -28,7 +40,11 @@
     "release:minor": "yarn release --minor",
     "release:major": "yarn release --major"
   },
-  "dependencies": {},
+  "dependencies": {
+    "csv-generate": "4.4.1",
+    "csv-parse": "5.5.6",
+    "csv-stringify": "6.5.1"
+  },
   "devDependencies": {
     "@swc-node/register": "1.10.9",
     "@swc/cli": "0.4.0",

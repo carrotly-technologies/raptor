@@ -2,7 +2,16 @@ import * as gtfs from '@lib/gtfs/gtfs.types';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
 
+export interface ConstructorArgs {
+    maxRounds?: number;
+    maxDays?: number;
+    maxWalkingTime?: number;
+    avgWalkingSpeed?: number;
+    footpaths?: 'computed' | 'transfers' | 'none';
+}
+
 export interface LoadArgs {
+    // url: string | string[];
     stops: gtfs.Stop[];
     trips: gtfs.Trip[];
     routes: gtfs.Route[];
@@ -10,10 +19,10 @@ export interface LoadArgs {
     calendar: gtfs.Calendar[];
     calendarDates: gtfs.CalendarDate[];
     transfers: gtfs.Transfer[];
-    maxRounds?: number;
-    maxDays?: number;
-    maxWalkingTime?: number;
-    walkingSpeed?: number;
+}
+
+export interface DumpArgs {
+    url: string;
 }
 
 export interface RangeArgs {
@@ -75,6 +84,7 @@ export interface Service {
     serviceId: gtfs.ServiceId;
     startDate: number;
     endDate: number;
+    // What would be the performance impact of using a Map/Set instead of an Array?
     dayOfWeek: Array<boolean>;
     exclude: Array<boolean>;
     include: Array<boolean>;

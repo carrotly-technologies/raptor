@@ -1,6 +1,5 @@
 import { Raptor } from '@lib/algo/raptor.class';
 import { GtfsLoader } from '@lib/gtfs/gtfs-loader.class';
-import { printJourneys } from '@lib/utils/print-journeys.function';
 import * as path from 'node:path';
 
 const bootstrap = () => {
@@ -15,24 +14,35 @@ const bootstrap = () => {
     }
 
     const loader = new GtfsLoader();
+    console.time('Gtfs phase');
     const gtfs = loader.load(path.join(__dirname, '..', '..', 'etc'));
+    console.timeEnd('Gtfs phase');
 
-    const raptor = new Raptor();
+    const raptor = new Raptor({
+        maxRounds: 10,
+        maxDays: 1,
+        footpaths: 'transfers',
+    });
 
     console.time('Loading phase');
-    raptor.load({ ...gtfs, maxRounds: 10, maxDays: 1 });
+    // raptor.load({ url: path.join(__dirname, '..', '..', 'etc', 'gtfs-buses.zip') });
+    raptor.load({ ...gtfs });
     console.timeEnd('Loading phase');
 
-    console.time('Planing phase');
-    const journeys = raptor.plan({
-        sourceStopId,
-        targetStopId,
-        date,
-        time,
-    });
-    console.timeEnd('Planing phase');
+    console.time('Dumping phase');
+    raptor.dump({ url: path.join(__dirname, '..', '..', 'etc') });
+    console.timeEnd('Dumping phase');
 
-    printJourneys(journeys, gtfs);
+    // console.time('Planing phase');
+    // const journeys = raptor.plan({
+    //     sourceStopId,
+    //     targetStopId,
+    //     date,
+    //     time,
+    // });
+    // console.timeEnd('Planing phase');
+
+    // printJourneys(journeys, gtfs);
 };
 
 bootstrap();

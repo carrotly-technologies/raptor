@@ -1,5 +1,7 @@
 import {
     ConnectionsByStopIdx,
+    ConstructorArgs,
+    DumpArgs,
     Journey,
     LoadArgs,
     PlanArgs,
@@ -18,10 +20,16 @@ import {
 import * as gtfs from '@lib/gtfs/gtfs.types';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
+import { stringify } from 'csv-stringify/sync';
+import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
 
 export class Raptor {
-    private maxRounds: number = 0;
-    private maxDays: number = 0;
+    private maxRounds: number;
+    private maxDays: number;
+    private maxWalkingTime: number;
+    private avgWalkingSpeed: number;
+    private footpaths: 'computed' | 'transfers' | 'none';
 
     private routes: Route[] = [];
     private stopTimes: StopTime[] = [];
@@ -36,10 +44,15 @@ export class Raptor {
 
     private stopIdxByStopId: Array<number> = [];
 
-    public load(args: LoadArgs): void {
-        this.maxRounds = args.maxRounds;
-        this.maxDays = args.maxDays;
+    public constructor(args: ConstructorArgs) {
+        this.maxRounds = args.maxRounds ?? 10;
+        this.maxDays = args.maxDays ?? 1;
+        this.maxWalkingTime = args.maxWalkingTime ?? 5 * 60;
+        this.avgWalkingSpeed = args.avgWalkingSpeed ?? 1.33;
+        this.footpaths = args.footpaths ?? 'none';
+    }
 
+    public load(args: LoadArgs): void {
         const stopTimes = [...args.stopTimes].sort((a, b) => Number(a['stop_sequence']) - Number(b['stop_sequence']));
 
         const stopTimesByTripId = stopTimes.reduce<Record<gtfs.TripId, gtfs.StopTime[]>>((acc, stopTime) => {
@@ -56,7 +69,7 @@ export class Raptor {
             if (stopTimes.length === 0) acc;
 
             const stopIds = stopTimes.map((st) => st['stop_id']);
-            const routeId = stopIds.join('-');
+            const routeId = crypto.createHash('md5').update(stopIds.join('-')).digest('hex');
 
             acc[routeId] ??= [];
             acc[routeId].push(trip);
@@ -210,6 +223,61 @@ export class Raptor {
             this.stopRoutes.push(...routeIdxs);
             this.stopIdxByStopId[stop.stopId] = stopIdx;
         }
+    }
+
+    public dump(args: DumpArgs): boolean {
+        const config = [
+            // { data: this.routes, file: 'raptor_routes.csv' },
+            // { data: this.stopTimes, file: 'raptor_stop_times.csv' },
+            // { data: this.stops, file: 'raptor_stops.csv' },
+            // { data: this.transfers, file: 'raptor_transfers.csv' },
+            // { data: this.routeStops, file: 'raptor_route_stops.csv' },
+            // { data: this.stopRoutes, file: 'raptor_stop_routes.csv' },
+            { data: [this.services[0]], file: 'raptor_services.csv' },
+        ];
+
+        console.log(
+            this.routes.length,
+            this.stopTimes.length,
+            this.stops.length,
+            this.transfers.length,
+            this.routeStops.length,
+            this.stopRoutes.length,
+            this.services.length,
+        );
+
+        // services cannot be dumped because of the nested interface
+        // dayOfWeek: Array<boolean>;
+        // exclude: Array<boolean>;
+        // include: Array<boolean>;
+
+        config.forEach((item) => {
+            console.time('Dumping ' + item.file);
+            const data = stringify(item.data, { header: true });
+            fs.writeFileSync(args.url + '/' + item.file, data);
+            console.timeEnd('Dumping ' + item.file);
+        });
+
+        // const data = stringify(this.routes, { header: true });
+        // fs.writeFileSync(args.url + '/raptor_routes.csv', data);
+
+        // await Promise.all(
+        // config.map((item) => {
+        // return finished(stringify(item.data, { header: true }).pipe(fs.createWriteStream(args.url + '/' + item.file)), { error: true });
+        // })
+        // );
+
+        // await finished(stringify(config[0].data, { header: true }).pipe(fs.createWriteStream(args.url + '/' + config[0].file)), { error: true });
+
+        // const columns = Object.keys(this.routes[0]).map((key) => ({ key: key }));
+
+        // stringify(this.routes, { header: true, columns }, (err, out) => {
+        //     if (err) throw err;
+
+        //     fs.writeFile(args.url, out, (err) => { if (err) { throw err; } });
+        // })
+
+        return true;
     }
 
     public range(args: RangeArgs): Journey[] {
@@ -441,7 +509,7 @@ export class Raptor {
 
         for (
             let stopTimeIdx = route.firstTripIdx + routeStopIdx - route.firstRouteStopIdx,
-            serviceIdx = route.firstServiceIdx;
+                serviceIdx = route.firstServiceIdx;
             stopTimeIdx < route.firstTripIdx + route.numberOfTrips * route.numberOfRouteStops;
             stopTimeIdx += route.numberOfRouteStops, serviceIdx += 1
         ) {
@@ -462,13 +530,13 @@ export class Raptor {
         // @fixme: date + 1 is not correct, it will not work for the last day of the month
         return retry > 0
             ? this.getEarliestBoardingStopTimeIdx(
-                routeIdx,
-                routeStopIdx,
-                date + 1,
-                (dayOfWeek + 1) % 7,
-                Math.max(0, time - 86400),
-                retry - 1,
-            )
+                  routeIdx,
+                  routeStopIdx,
+                  date + 1,
+                  (dayOfWeek + 1) % 7,
+                  Math.max(0, time - 86400),
+                  retry - 1,
+              )
             : [null, 0];
     }
 
