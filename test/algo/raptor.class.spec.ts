@@ -1,18 +1,22 @@
-import { Raptor } from '@lib/algo/raptor.class';
+import { RaptorV1 } from '@lib/algo/raptor-v1.class';
+import { RaptorV2 } from '@lib/algo/raptor-v2.class';
 import { GtfsLoader } from '@lib/gtfs/gtfs-loader.class';
 import * as assert from 'node:assert';
 import * as path from 'node:path';
 import { before, describe, it } from 'node:test';
 
-describe(Raptor.name, () => {
-    let raptor: Raptor;
+describe(RaptorV1.name, () => {
+    let raptor: RaptorV2;
 
     before(() => {
         const loader = new GtfsLoader();
         const gtfs = loader.load(path.join(__dirname, '..', '..', 'etc'));
 
-        raptor = new Raptor();
-        raptor.load({ ...gtfs, maxRounds: 6, maxDays: 1 });
+        raptor = new RaptorV2({
+            maxRounds: 6,
+            maxDays: 1
+        });
+        raptor.load({ ...gtfs });
     });
 
     describe('journeys with at least 0 transfers', () => {

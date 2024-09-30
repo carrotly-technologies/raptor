@@ -20,11 +20,10 @@ import {
 import * as gtfs from '@lib/gtfs/gtfs.types';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
-import { stringify } from 'csv-stringify/sync';
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 
-export class Raptor {
+export class RaptorV2 {
     private maxRounds: number;
     private maxDays: number;
     private maxWalkingTime: number;
@@ -42,7 +41,7 @@ export class Raptor {
 
     private services: Service[] = [];
 
-    private stopIdxByStopId: Array<number> = [];
+    private stopIdxByStopId: Map<string, number> = new Map();
 
     public constructor(args: ConstructorArgs) {
         this.maxRounds = args.maxRounds ?? 10;
@@ -221,63 +220,8 @@ export class Raptor {
             stop.numberOfStopRoutes = routeIdxs.length;
 
             this.stopRoutes.push(...routeIdxs);
-            this.stopIdxByStopId[stop.stopId] = stopIdx;
+            this.stopIdxByStopId.set(stop.stopId, stopIdx);
         }
-    }
-
-    public dump(args: DumpArgs): boolean {
-        const config = [
-            // { data: this.routes, file: 'raptor_routes.csv' },
-            // { data: this.stopTimes, file: 'raptor_stop_times.csv' },
-            // { data: this.stops, file: 'raptor_stops.csv' },
-            // { data: this.transfers, file: 'raptor_transfers.csv' },
-            // { data: this.routeStops, file: 'raptor_route_stops.csv' },
-            // { data: this.stopRoutes, file: 'raptor_stop_routes.csv' },
-            { data: [this.services[0]], file: 'raptor_services.csv' },
-        ];
-
-        console.log(
-            this.routes.length,
-            this.stopTimes.length,
-            this.stops.length,
-            this.transfers.length,
-            this.routeStops.length,
-            this.stopRoutes.length,
-            this.services.length,
-        );
-
-        // services cannot be dumped because of the nested interface
-        // dayOfWeek: Array<boolean>;
-        // exclude: Array<boolean>;
-        // include: Array<boolean>;
-
-        config.forEach((item) => {
-            console.time('Dumping ' + item.file);
-            const data = stringify(item.data, { header: true });
-            fs.writeFileSync(args.url + '/' + item.file, data);
-            console.timeEnd('Dumping ' + item.file);
-        });
-
-        // const data = stringify(this.routes, { header: true });
-        // fs.writeFileSync(args.url + '/raptor_routes.csv', data);
-
-        // await Promise.all(
-        // config.map((item) => {
-        // return finished(stringify(item.data, { header: true }).pipe(fs.createWriteStream(args.url + '/' + item.file)), { error: true });
-        // })
-        // );
-
-        // await finished(stringify(config[0].data, { header: true }).pipe(fs.createWriteStream(args.url + '/' + config[0].file)), { error: true });
-
-        // const columns = Object.keys(this.routes[0]).map((key) => ({ key: key }));
-
-        // stringify(this.routes, { header: true, columns }, (err, out) => {
-        //     if (err) throw err;
-
-        //     fs.writeFile(args.url, out, (err) => { if (err) { throw err; } });
-        // })
-
-        return true;
     }
 
     public range(args: RangeArgs): Journey[] {
@@ -329,8 +273,8 @@ export class Raptor {
         const date = RaptorDate.from(args.date);
         const time = RaptorTime.from(args.time);
 
-        const sourceStopIdx = this.stopIdxByStopId[sourceStopId];
-        const targetStopIdx = this.stopIdxByStopId[targetStopId];
+        const sourceStopIdx = this.stopIdxByStopId.get(sourceStopId);
+        const targetStopIdx = this.stopIdxByStopId.get(targetStopId);
 
         // Intermediate results
         const connectionsByStopIdx: ConnectionsByStopIdx = [];
@@ -449,7 +393,7 @@ export class Raptor {
                     transferIdx++
                 ) {
                     const { targetStopId, walkingTime } = this.transfers[transferIdx];
-                    const targetStopIdx = this.stopIdxByStopId[targetStopId];
+                    const targetStopIdx = this.stopIdxByStopId.get(targetStopId);
 
                     const arrivalTime = Math.min(
                         knownArrivals[round][targetStopIdx],
@@ -509,7 +453,7 @@ export class Raptor {
 
         for (
             let stopTimeIdx = route.firstTripIdx + routeStopIdx - route.firstRouteStopIdx,
-                serviceIdx = route.firstServiceIdx;
+            serviceIdx = route.firstServiceIdx;
             stopTimeIdx < route.firstTripIdx + route.numberOfTrips * route.numberOfRouteStops;
             stopTimeIdx += route.numberOfRouteStops, serviceIdx += 1
         ) {
@@ -530,13 +474,13 @@ export class Raptor {
         // @fixme: date + 1 is not correct, it will not work for the last day of the month
         return retry > 0
             ? this.getEarliestBoardingStopTimeIdx(
-                  routeIdx,
-                  routeStopIdx,
-                  date + 1,
-                  (dayOfWeek + 1) % 7,
-                  Math.max(0, time - 86400),
-                  retry - 1,
-              )
+                routeIdx,
+                routeStopIdx,
+                date + 1,
+                (dayOfWeek + 1) % 7,
+                Math.max(0, time - 86400),
+                retry - 1,
+            )
             : [null, 0];
     }
 

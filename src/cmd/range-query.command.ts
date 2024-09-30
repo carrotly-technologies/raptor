@@ -1,4 +1,4 @@
-import { Raptor } from '@lib/algo/raptor.class';
+import { RaptorV1 } from '@lib/algo/raptor-v1.class';
 import { GtfsLoader } from '@lib/gtfs/gtfs-loader.class';
 import { printJourneys } from '@lib/utils/print-journeys.function';
 import * as path from 'node:path';
@@ -16,7 +16,7 @@ const bootstrap = () => {
     const loader = new GtfsLoader();
     const gtfs = loader.load(path.join(__dirname, '..', '..', 'etc'));
 
-    const raptor = new Raptor();
+    const raptor = new RaptorV1();
 
     console.time('Loading phase');
     raptor.load({ ...gtfs, maxRounds: 10, maxDays: 1 });
