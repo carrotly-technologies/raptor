@@ -29,7 +29,7 @@ yarn cmd:plan-query 824788 1606200 2024-09-14 10:00:00
 ### Range queries
 
 ```shell
-# Zakopane Dworzec → Kęty ZML
+# Nowy Targ D.A. → Andrychów Dworzec Autobusowy
 yarn cmd:range-query 1014894 1450689 2024-09-13
 ```
 

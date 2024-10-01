@@ -26,9 +26,6 @@ import * as fs from 'node:fs';
 export class RaptorV2 {
     private maxRounds: number;
     private maxDays: number;
-    private maxWalkingTime: number;
-    private avgWalkingSpeed: number;
-    private footpaths: 'computed' | 'transfers' | 'none';
 
     private routes: Route[] = [];
     private stopTimes: StopTime[] = [];
@@ -43,185 +40,13 @@ export class RaptorV2 {
 
     private stopIdxByStopId: Map<string, number> = new Map();
 
-    public constructor(args: ConstructorArgs) {
+    public constructor(args: Pick<ConstructorArgs, 'maxRounds' | 'maxDays'>) {
         this.maxRounds = args.maxRounds ?? 10;
         this.maxDays = args.maxDays ?? 1;
-        this.maxWalkingTime = args.maxWalkingTime ?? 5 * 60;
-        this.avgWalkingSpeed = args.avgWalkingSpeed ?? 1.33;
-        this.footpaths = args.footpaths ?? 'none';
     }
 
-    public load(args: LoadArgs): void {
-        const stopTimes = [...args.stopTimes].sort((a, b) => Number(a['stop_sequence']) - Number(b['stop_sequence']));
+    public load(args: { url: string }): void {
 
-        const stopTimesByTripId = stopTimes.reduce<Record<gtfs.TripId, gtfs.StopTime[]>>((acc, stopTime) => {
-            const tripId = stopTime['trip_id'];
-
-            acc[tripId] ??= [];
-            acc[tripId].push(stopTime);
-
-            return acc;
-        }, {});
-
-        const tripsByRouteId = args.trips.reduce<Record<gtfs.RouteId, gtfs.Trip[]>>((acc, trip) => {
-            const stopTimes = stopTimesByTripId[trip['trip_id']] || [];
-            if (stopTimes.length === 0) acc;
-
-            const stopIds = stopTimes.map((st) => st['stop_id']);
-            const routeId = crypto.createHash('md5').update(stopIds.join('-')).digest('hex');
-
-            acc[routeId] ??= [];
-            acc[routeId].push(trip);
-
-            return acc;
-        }, {});
-
-        for (const routeId in tripsByRouteId) {
-            tripsByRouteId[routeId].sort((a, b) => {
-                const stopTimesA = stopTimesByTripId[a['trip_id']];
-                const stopTimesB = stopTimesByTripId[b['trip_id']];
-
-                return (
-                    RaptorTime.from(stopTimesA[0]['departure_time']).toNumber() -
-                    RaptorTime.from(stopTimesB[0]['departure_time']).toNumber()
-                );
-            });
-        }
-
-        const transfersByStopId = args.transfers.reduce<Record<gtfs.StopId, Transfer[]>>((acc, transfer) => {
-            const sourceStopId = transfer['from_stop_id'];
-            const targetStopId = transfer['to_stop_id'];
-            const walkingTime = Number(transfer['min_transfer_time']);
-
-            acc[sourceStopId] ??= [];
-            acc[sourceStopId].push({ targetStopId, walkingTime });
-
-            return acc;
-        }, {});
-
-        const stopByStopId = args.stops.reduce<Record<gtfs.StopId, gtfs.Stop>>((acc, stop) => {
-            acc[stop['stop_id']] = stop;
-            return acc;
-        }, {});
-
-        const calendarDatesByServiceId = args.calendarDates.reduce<Record<gtfs.ServiceId, Record<'1' | '2', number[]>>>(
-            (acc, calendarDate) => {
-                const serviceId = calendarDate['service_id'];
-                acc[serviceId] ??= { [1]: [], [2]: [] };
-
-                if (calendarDate['exception_type'] === '1') {
-                    acc[serviceId][1].push(RaptorDate.from(calendarDate['date']).toNumber());
-                } else {
-                    acc[serviceId][2].push(RaptorDate.from(calendarDate['date']).toNumber());
-                }
-
-                return acc;
-            },
-            {},
-        );
-
-        const calendarByServiceId = args.calendar.reduce<Record<gtfs.ServiceId, gtfs.Calendar>>((acc, calendar) => {
-            acc[calendar['service_id']] = calendar;
-            return acc;
-        }, {});
-
-        for (const routeId in tripsByRouteId) {
-            this.routes.push({
-                routeId: routeId,
-                numberOfTrips: tripsByRouteId[routeId].length,
-                numberOfServices: tripsByRouteId[routeId].length,
-                numberOfRouteStops: stopTimesByTripId[tripsByRouteId[routeId][0]['trip_id']].length,
-                firstTripIdx: this.stopTimes.length,
-                firstServiceIdx: this.services.length,
-                firstRouteStopIdx: null,
-            });
-
-            tripsByRouteId[routeId].forEach((trip) => {
-                const stopTimes = stopTimesByTripId[trip['trip_id']] || [];
-                stopTimes.forEach((stopTime) => {
-                    this.stopTimes.push({
-                        stopId: stopTime['stop_id'],
-                        tripId: stopTime['trip_id'],
-                        arrivalTime: RaptorTime.fromString(stopTime['arrival_time']).toNumber(),
-                        departureTime: RaptorTime.fromString(stopTime['departure_time']).toNumber(),
-                    });
-                });
-
-                const calendar = calendarByServiceId[trip['service_id']];
-                const calendarDates = calendarDatesByServiceId[trip['service_id']] || {};
-
-                const include: Array<boolean> = [];
-                const exclude: Array<boolean> = [];
-
-                (calendarDates[1] || []).forEach((date) => (include[date] = true));
-                (calendarDates[2] || []).forEach((date) => (exclude[date] = true));
-
-                this.services.push({
-                    serviceId: trip['service_id'],
-                    startDate: calendar ? RaptorDate.from(calendar['start_date']).toNumber() : 0,
-                    endDate: calendar ? RaptorDate.from(calendar['end_date']).toNumber() : 0,
-                    dayOfWeek: [
-                        calendar?.sunday === '1',
-                        calendar?.monday === '1',
-                        calendar?.tuesday === '1',
-                        calendar?.wednesday === '1',
-                        calendar?.thursday === '1',
-                        calendar?.friday === '1',
-                        calendar?.saturday === '1',
-                    ],
-                    exclude,
-                    include,
-                });
-            });
-        }
-
-        for (const stopId in stopByStopId) {
-            const transfers = transfersByStopId[stopId] || [];
-
-            this.stops.push({
-                stopId: stopId,
-                numberOfTransfers: transfers.length,
-                numberOfStopRoutes: 0,
-                firstTransferIdx: this.transfers.length,
-                firstStopRouteIdx: this.stopRoutes.length,
-            });
-
-            transfers.sort((a, b) => Number(a['targetStopId']) - Number(b['targetStopId']));
-
-            transfers.forEach((transfer) => {
-                this.transfers.push({
-                    targetStopId: transfer.targetStopId,
-                    walkingTime: transfer.walkingTime,
-                });
-            });
-        }
-
-        const routeIdxsByStopIdx: Record<StopIdx, RouteIdx[]> = {};
-
-        for (let routeIdx = 0; routeIdx < this.routes.length; routeIdx++) {
-            const { firstTripIdx, numberOfRouteStops } = this.routes[routeIdx];
-
-            this.routes[routeIdx].firstRouteStopIdx = this.routeStops.length;
-            for (let stopTimeIdx = firstTripIdx; stopTimeIdx < firstTripIdx + numberOfRouteStops; stopTimeIdx++) {
-                const stopIdx = this.stops.findIndex((stop) => stop.stopId === this.stopTimes[stopTimeIdx].stopId);
-
-                this.routeStops.push(stopIdx);
-
-                routeIdxsByStopIdx[stopIdx] ??= [];
-                routeIdxsByStopIdx[stopIdx].push(routeIdx);
-            }
-        }
-
-        for (let stopIdx = 0; stopIdx < this.stops.length; stopIdx++) {
-            const stop = this.stops[stopIdx];
-            stop.firstStopRouteIdx = this.stopRoutes.length;
-
-            const routeIdxs = routeIdxsByStopIdx[stopIdx] || [];
-            stop.numberOfStopRoutes = routeIdxs.length;
-
-            this.stopRoutes.push(...routeIdxs);
-            this.stopIdxByStopId.set(stop.stopId, stopIdx);
-        }
     }
 
     public range(args: RangeArgs): Journey[] {
