@@ -3,11 +3,23 @@
   "version": "0.1.0",
   "description": "Round-Based Public Transit Routing",
   "author": "Carrotly Technologies <contact@carrotly.tech>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/carrotly-technologies/raptor.git"
+  },
   "license": "MIT",
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
   "files": [
     "dist/**/*"
+  ],
+  "keywords": [
+    "transit",
+    "routing",
+    "public transit",
+    "routing engine",
+    "raptor",
+    "gtfs"
   ],
   "engines": {
     "node": ">=18.0.0"
@@ -18,9 +30,10 @@
     "postbuild": "find dist -type f -name '*.d.ts' -exec sed -i 's|@lib/\\(.*\\)|\\./\\1|g' {} +",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
-    "test": "node --require @swc-node/register --test ./test/**/*.spec.ts ",
+    "test": "node --require @swc-node/register --test ./test/**/*.spec.ts",
     "test:watch": "node --watch --require @swc-node/register --test ./test/**/*.spec.ts",
-    "cmd:create-transfers": "node dist/cmd/create-transfers.command.js",
+    "test:perf": "node --require @swc-node/register ./test/algo/raptor.class.perf.ts",
+    "cmd:build-dataset": "node dist/cmd/build-dataset.command.js",
     "cmd:plan-query": "node dist/cmd/plan-query.command.js",
     "cmd:range-query": "node dist/cmd/range-query.command.js",
     "release": "yarn version --message 'Release package v%s'",
@@ -28,12 +41,17 @@
     "release:minor": "yarn release --minor",
     "release:major": "yarn release --major"
   },
-  "dependencies": {},
+  "dependencies": {
+    "csv-generate": "4.4.1",
+    "csv-parse": "5.5.6",
+    "csv-stringify": "6.5.1"
+  },
   "devDependencies": {
     "@swc-node/register": "1.10.9",
     "@swc/cli": "0.4.0",
-    "@swc/core": "1.7.28",
+    "@swc/core": "1.7.26",
     "@types/node": "22.7.4",
+    "benchmark": "2.1.4",
     "chokidar": "4.0.1",
     "commit-and-tag-version": "12.4.4",
     "eslint": "9.11.1",

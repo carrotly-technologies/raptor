@@ -2,18 +2,9 @@ import * as gtfs from '@lib/gtfs/gtfs.types';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
 
-export interface LoadArgs {
-    stops: gtfs.Stop[];
-    trips: gtfs.Trip[];
-    routes: gtfs.Route[];
-    stopTimes: gtfs.StopTime[];
-    calendar: gtfs.Calendar[];
-    calendarDates: gtfs.CalendarDate[];
-    transfers: gtfs.Transfer[];
+export interface ConstructorArgs {
     maxRounds?: number;
     maxDays?: number;
-    maxWalkingTime?: number;
-    walkingSpeed?: number;
 }
 
 export interface RangeArgs {
@@ -64,7 +55,7 @@ export interface Stop {
     firstTransferIdx: number;
 }
 
-export interface Transfer {
+export interface Footpath {
     targetStopId: gtfs.StopId;
     walkingTime: number;
 }
@@ -76,8 +67,18 @@ export interface Service {
     startDate: number;
     endDate: number;
     dayOfWeek: Array<boolean>;
-    exclude: Array<boolean>;
-    include: Array<boolean>;
+    exclude: Map<number, boolean>;
+    include: Map<number, boolean>;
+}
+
+export interface Dataset {
+    routes: Route[];
+    stopTimes: StopTime[];
+    stops: Stop[];
+    footpaths: Footpath[];
+    routeStops: RouteStop[];
+    stopRoutes: StopRoute[];
+    services: Service[];
 }
 
 export type ConnectionsByStopIdx = Array<

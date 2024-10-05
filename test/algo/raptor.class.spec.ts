@@ -1,18 +1,24 @@
 import { Raptor } from '@lib/algo/raptor.class';
-import { GtfsLoader } from '@lib/gtfs/gtfs-loader.class';
+import { RaptorCollector } from '@lib/main';
 import * as assert from 'node:assert';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { before, describe, it } from 'node:test';
 
 describe(Raptor.name, () => {
     let raptor: Raptor;
 
-    before(() => {
-        const loader = new GtfsLoader();
-        const gtfs = loader.load(path.join(__dirname, '..', '..', 'etc'));
+    before(async () => {
+        const collector = new RaptorCollector();
+        await collector.loadDataset({
+            source: fs.createReadStream(path.resolve(__dirname, '..', '..', 'etc', 'dataset.json')),
+        });
 
-        raptor = new Raptor();
-        raptor.load({ ...gtfs, maxRounds: 6, maxDays: 1 });
+        raptor = new Raptor({
+            maxRounds: 6,
+            maxDays: 1,
+            dataset: collector.getDataset(),
+        });
     });
 
     describe('journeys with at least 0 transfers', () => {
