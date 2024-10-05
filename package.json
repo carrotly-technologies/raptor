@@ -32,7 +32,8 @@
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "node --require @swc-node/register --test ./test/**/*.spec.ts",
     "test:watch": "node --watch --require @swc-node/register --test ./test/**/*.spec.ts",
-    "cmd:create-transfers": "node dist/cmd/create-transfers.command.js",
+    "test:perf": "node --require @swc-node/register ./test/algo/raptor.class.perf.ts",
+    "cmd:build-dataset": "node dist/cmd/build-dataset.command.js",
     "cmd:plan-query": "node dist/cmd/plan-query.command.js",
     "cmd:range-query": "node dist/cmd/range-query.command.js",
     "release": "yarn version --message 'Release package v%s'",
@@ -41,13 +42,9 @@
     "release:major": "yarn release --major"
   },
   "dependencies": {
-    "axios": "1.7.7",
     "csv-generate": "4.4.1",
     "csv-parse": "5.5.6",
-    "csv-stringify": "6.5.1",
-    "gtfs-stream": "2.2.0",
-    "unzipper": "0.12.3",
-    "yauzl": "3.1.3"
+    "csv-stringify": "6.5.1"
   },
   "devDependencies": {
     "@swc-node/register": "1.10.9",

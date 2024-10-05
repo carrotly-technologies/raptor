@@ -5,24 +5,6 @@ import { RaptorTime } from '@lib/utils/raptor-time.class';
 export interface ConstructorArgs {
     maxRounds?: number;
     maxDays?: number;
-    maxWalkingTime?: number;
-    avgWalkingSpeed?: number;
-    footpaths?: 'computed' | 'transfers' | 'none';
-}
-
-export interface LoadArgs {
-    // url: string | string[];
-    stops: gtfs.Stop[];
-    trips: gtfs.Trip[];
-    routes: gtfs.Route[];
-    stopTimes: gtfs.StopTime[];
-    calendar: gtfs.Calendar[];
-    calendarDates: gtfs.CalendarDate[];
-    transfers: gtfs.Transfer[];
-}
-
-export interface DumpArgs {
-    url: string;
 }
 
 export interface RangeArgs {
@@ -73,7 +55,7 @@ export interface Stop {
     firstTransferIdx: number;
 }
 
-export interface Transfer {
+export interface Footpath {
     targetStopId: gtfs.StopId;
     walkingTime: number;
 }
@@ -84,10 +66,19 @@ export interface Service {
     serviceId: gtfs.ServiceId;
     startDate: number;
     endDate: number;
-    // What would be the performance impact of using a Map/Set instead of an Array?
     dayOfWeek: Array<boolean>;
-    exclude: Array<boolean>;
-    include: Array<boolean>;
+    exclude: Map<number, boolean>;
+    include: Map<number, boolean>;
+}
+
+export interface Dataset {
+    routes: Route[];
+    stopTimes: StopTime[];
+    stops: Stop[];
+    footpaths: Footpath[];
+    routeStops: RouteStop[];
+    stopRoutes: StopRoute[];
+    services: Service[];
 }
 
 export type ConnectionsByStopIdx = Array<
