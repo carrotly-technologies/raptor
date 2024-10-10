@@ -49,7 +49,7 @@
   "devDependencies": {
     "@swc-node/register": "1.10.9",
     "@swc/cli": "0.4.0",
-    "@swc/core": "1.7.26",
+    "@swc/core": "1.7.35",
     "@types/node": "22.7.5",
     "benchmark": "2.1.4",
     "chokidar": "4.0.1",
