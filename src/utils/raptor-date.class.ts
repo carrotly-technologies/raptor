@@ -36,4 +36,16 @@ export class RaptorDate {
     public getDayOfWeek(): number {
         return new Date(this.toString()).getDay();
     }
+
+    public addDays(days: number): RaptorDate {
+        const date = new Date(this.toString());
+
+        date.setDate(date.getDate() + days);
+
+        return RaptorDate.fromString(date.toISOString().slice(0, 10));
+    }
+
+    public subDays(days: number): RaptorDate {
+        return this.addDays(-days);
+    }
 }

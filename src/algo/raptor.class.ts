@@ -1,6 +1,7 @@
 import {
     ConnectionsByStopIdx,
     ConstructorArgs,
+    Dataset,
     Footpath,
     Journey,
     PlanArgs,
@@ -16,7 +17,6 @@ import {
 } from '@lib/algo/raptor.types';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
-import { raptor } from './raptor-collector.class';
 
 export class Raptor {
     private maxRounds: number;
@@ -35,7 +35,7 @@ export class Raptor {
 
     private stopIdxByStopId: Map<string, number> = new Map();
 
-    public constructor(args: Pick<ConstructorArgs, 'maxRounds' | 'maxDays'> & { dataset: raptor.Dataset }) {
+    public constructor(args: Pick<ConstructorArgs, 'maxRounds' | 'maxDays'> & { dataset: Dataset }) {
         this.maxRounds = args.maxRounds ?? 10;
         this.maxDays = args.maxDays ?? 1;
         this.routes = args.dataset.routes;
@@ -295,12 +295,12 @@ export class Raptor {
                 }
             }
         }
-        // @fixme: date + 1 is not correct, it will not work for the last day of the month
+
         return retry > 0
             ? this.getEarliestBoardingStopTimeIdx(
                   routeIdx,
                   routeStopIdx,
-                  date + 1,
+                  RaptorDate.from(date).addDays(1).toNumber(),
                   (dayOfWeek + 1) % 7,
                   Math.max(0, time - 86400),
                   retry - 1,

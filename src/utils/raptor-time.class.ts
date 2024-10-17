@@ -65,4 +65,12 @@ export class RaptorTime {
     public lte(other: RaptorTime): boolean {
         return this.time <= other.time;
     }
+
+    public addSeconds(seconds: number): RaptorTime {
+        return RaptorTime.fromNumber(this.time + seconds);
+    }
+
+    public subSeconds(seconds: number): RaptorTime {
+        return this.addSeconds(-seconds);
+    }
 }

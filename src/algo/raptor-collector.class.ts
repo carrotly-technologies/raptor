@@ -1,11 +1,10 @@
 import { BuildDatasetArgs, LoadDatasetArgs, LoadGtfsArgs, SaveDatasetArgs } from '@lib/algo/raptor-collector.types';
 import { Dataset, Footpath, RouteIdx, StopIdx } from '@lib/algo/raptor.types';
 import * as gtfs from '@lib/gtfs/gtfs.types';
+import { RaptorJSON } from '@lib/main';
 import { calculateHaversineDistance } from '@lib/utils/calculate-haversine-distance.function';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
-import { replacer } from '@lib/utils/replacer.function';
-import { reviver } from '@lib/utils/reviver.function';
 import { parse } from 'csv-parse';
 import * as crypto from 'node:crypto';
 import * as stream from 'node:stream';
@@ -259,14 +258,14 @@ export class RaptorCollector {
         args.source.on('error', (error) => {
             throw error;
         });
-        args.source.on('end', () => (this.dataset = JSON.parse(data, reviver)));
+        args.source.on('end', () => (this.dataset = RaptorJSON.parse(data)));
 
         await finished(args.source);
     }
 
     // @todo: Test this approach with a large dataset and see if it works. Marshaling the whole dataset to a JSON string may lead to a memory exhaustion.
     public async saveDataset(args: SaveDatasetArgs): Promise<void> {
-        args.target.write(JSON.stringify(this.dataset, replacer));
+        args.target.write(RaptorJSON.stringify(this.dataset));
         args.target.end();
 
         await finished(args.target);
