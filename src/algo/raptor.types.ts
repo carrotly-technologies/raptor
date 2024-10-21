@@ -1,6 +1,6 @@
-import * as gtfs from '@lib/gtfs/gtfs.types';
-import { RaptorDate } from '@lib/utils/raptor-date.class';
-import { RaptorTime } from '@lib/utils/raptor-time.class';
+import * as gtfs from '../gtfs/gtfs.types';
+import { RaptorDate } from '../utils/raptor-date.class';
+import { RaptorTime } from '../utils/raptor-time.class';
 
 export interface ConstructorArgs {
     maxRounds?: number;

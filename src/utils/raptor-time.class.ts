@@ -1,4 +1,4 @@
-import { TimeString } from '@lib/gtfs/gtfs.types';
+import { TimeString } from '../gtfs/gtfs.types';
 
 export class RaptorTime {
     constructor(private readonly time: number = 0) {}

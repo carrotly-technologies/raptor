@@ -27,7 +27,6 @@
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "yarn swc src -d dist -s true --delete-dir-on-start --strip-leading-paths",
-    "postbuild": "find dist -type f -name '*.d.ts' -exec sed -i 's|@lib/\\(.*\\)|\\./\\1|g' {} +",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "node --require @swc-node/register --test ./test/**/*.spec.ts",

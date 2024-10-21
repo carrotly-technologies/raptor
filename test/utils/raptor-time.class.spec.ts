@@ -1,6 +1,6 @@
-import { RaptorTime } from '@lib/utils/raptor-time.class';
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
+import { RaptorTime } from 'src/main';
 
 describe(RaptorTime.name, () => {
     it('should create a new instance from a number', () => {

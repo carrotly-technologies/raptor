@@ -1,5 +1,5 @@
-import * as gtfs from '@lib/gtfs/gtfs.types';
 import * as stream from 'stream';
+import * as gtfs from '../gtfs/gtfs.types';
 
 export interface LoadGtfsArgs {
     stops: gtfs.Stop[];

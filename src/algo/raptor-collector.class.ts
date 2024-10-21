@@ -1,12 +1,12 @@
-import { BuildDatasetArgs, LoadDatasetArgs, LoadGtfsArgs, SaveDatasetArgs } from '@lib/algo/raptor-collector.types';
-import { Dataset, Footpath, RouteIdx, StopIdx } from '@lib/algo/raptor.types';
-import * as gtfs from '@lib/gtfs/gtfs.types';
-import { RaptorJSON } from '@lib/main';
-import { calculateHaversineDistance } from '@lib/utils/calculate-haversine-distance.function';
-import { RaptorDate } from '@lib/utils/raptor-date.class';
-import { RaptorTime } from '@lib/utils/raptor-time.class';
 import * as crypto from 'node:crypto';
 import { finished } from 'node:stream/promises';
+import type * as gtfs from '../gtfs/gtfs.types';
+import { calculateHaversineDistance } from '../utils/calculate-haversine-distance.function';
+import { RaptorDate } from '../utils/raptor-date.class';
+import { RaptorJSON } from '../utils/raptor-json.class';
+import { RaptorTime } from '../utils/raptor-time.class';
+import type { BuildDatasetArgs, LoadDatasetArgs, LoadGtfsArgs, SaveDatasetArgs } from './raptor-collector.types';
+import type { Dataset, Footpath, RouteIdx, StopIdx } from './raptor.types';
 
 export class RaptorCollector {
     private stops: gtfs.Stop[] = [];

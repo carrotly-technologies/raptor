@@ -1,9 +1,9 @@
-import { RaptorCollector } from '@lib/algo/raptor-collector.class';
-import { Raptor } from '@lib/algo/raptor.class';
-import { GtfsLoader } from '@lib/gtfs/gtfs-loader.class';
-import { printJourneys } from '@lib/utils/print-journeys.function';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { RaptorCollector } from '../algo/raptor-collector.class';
+import { Raptor } from '../algo/raptor.class';
+import { GtfsLoader } from '../gtfs/gtfs-loader.class';
+import { printJourneys } from '../utils/print-journeys.function';
 
 const bootstrap = async () => {
     const sourceStopId = process.argv[2];

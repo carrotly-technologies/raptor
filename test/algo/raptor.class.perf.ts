@@ -1,8 +1,7 @@
-import { RaptorCollector } from '@lib/algo/raptor-collector.class';
-import { Raptor } from '@lib/algo/raptor.class';
 import * as bench from 'benchmark';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { Raptor, RaptorCollector } from 'src/main';
 
 const benchmark = async () => {
     const collector = new RaptorCollector();

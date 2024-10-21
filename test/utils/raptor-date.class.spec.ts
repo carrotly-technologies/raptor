@@ -1,6 +1,6 @@
-import { RaptorDate } from '@lib/utils/raptor-date.class';
 import * as assert from 'node:assert';
 import { describe, it } from 'node:test';
+import { RaptorDate } from 'src/main';
 
 describe(RaptorDate.name, () => {
     it('should create a new instance from a number', () => {

@@ -1,5 +1,5 @@
-import { replacer } from '@lib/utils/replacer.function';
-import { reviver } from '@lib/utils/reviver.function';
+import { replacer } from './replacer.function';
+import { reviver } from './reviver.function';
 
 export class RaptorJSON {
     static stringify(data: any): string {

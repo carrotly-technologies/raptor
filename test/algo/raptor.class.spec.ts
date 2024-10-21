@@ -1,9 +1,8 @@
-import { Raptor } from '@lib/algo/raptor.class';
-import { RaptorCollector } from '@lib/main';
 import * as assert from 'node:assert';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { before, describe, it } from 'node:test';
+import { Raptor, RaptorCollector } from 'src/main';
 
 describe(Raptor.name, () => {
     let raptor: Raptor;

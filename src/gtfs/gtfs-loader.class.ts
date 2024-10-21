@@ -1,8 +1,8 @@
-import { GTFS } from '@lib/gtfs/gtfs.types';
-import { checkIfFileExists } from '@lib/utils/check-if-file-exists.function';
-import { fromEntries } from '@lib/utils/from-entries.function';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { GTFS } from '../gtfs/gtfs.types';
+import { checkIfFileExists } from '../utils/check-if-file-exists.function';
+import { fromEntries } from '../utils/from-entries.function';
 
 export class GtfsLoader {
     public load(dirpath: string): GTFS {

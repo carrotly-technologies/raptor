@@ -13,10 +13,7 @@
       "experimental": {
         "emitIsolatedDts": true
       },
-      "paths": {
-        "@lib/*": ["src/*"],
-        "@tests/*": ["tests/*"]
-      }
+      "paths": {}
     },
     "module": {
         "type": "commonjs",

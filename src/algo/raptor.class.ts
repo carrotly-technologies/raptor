@@ -1,4 +1,6 @@
-import {
+import { RaptorDate } from '../utils/raptor-date.class';
+import { RaptorTime } from '../utils/raptor-time.class';
+import type {
     ConnectionsByStopIdx,
     ConstructorArgs,
     Dataset,
@@ -14,9 +16,7 @@ import {
     StopIdx,
     StopRoute,
     StopTime,
-} from '@lib/algo/raptor.types';
-import { RaptorDate } from '@lib/utils/raptor-date.class';
-import { RaptorTime } from '@lib/utils/raptor-time.class';
+} from './raptor.types';
 
 export class Raptor {
     private maxRounds: number;

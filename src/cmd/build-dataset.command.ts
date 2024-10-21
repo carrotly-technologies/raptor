@@ -1,9 +1,9 @@
-import { RaptorCollector } from '@lib/algo/raptor-collector.class';
-import * as gtfs from '@lib/gtfs/gtfs.types';
 import { parse } from 'csv-parse';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as stream from 'node:stream';
+import { RaptorCollector } from '../algo/raptor-collector.class';
+import * as gtfs from '../gtfs/gtfs.types';
 
 const bootstrap = async () => {
     const collector = new RaptorCollector();

@@ -1,6 +1,6 @@
-import { Journey } from '@lib/algo/raptor.types';
-import { GTFS } from '@lib/gtfs/gtfs.types';
-import { RaptorTime } from '@lib/utils/raptor-time.class';
+import { Journey } from '../algo/raptor.types';
+import { GTFS } from '../gtfs/gtfs.types';
+import { RaptorTime } from '../utils/raptor-time.class';
 
 export const printJourneys = (journeys: Journey[], gtfs: GTFS) => {
     journeys.forEach((journey, i) => {

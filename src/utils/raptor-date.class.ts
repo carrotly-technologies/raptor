@@ -1,4 +1,4 @@
-import { DateString } from '@lib/gtfs/gtfs.types';
+import { DateString } from '../gtfs/gtfs.types';
 
 export class RaptorDate {
     constructor(private readonly date: number = 0) {}
