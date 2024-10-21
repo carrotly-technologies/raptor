@@ -1,14 +1,12 @@
 import { BuildDatasetArgs, LoadDatasetArgs, LoadGtfsArgs, SaveDatasetArgs } from '@lib/algo/raptor-collector.types';
 import { Dataset, Footpath, RouteIdx, StopIdx } from '@lib/algo/raptor.types';
-import * as gtfs from '@lib/gtfs/gtfs.types';
 import { RaptorJSON } from '@lib/main';
 import { calculateHaversineDistance } from '@lib/utils/calculate-haversine-distance.function';
 import { RaptorDate } from '@lib/utils/raptor-date.class';
 import { RaptorTime } from '@lib/utils/raptor-time.class';
-import { parse } from 'csv-parse';
-import * as crypto from 'node:crypto';
-import * as stream from 'node:stream';
 import { finished } from 'node:stream/promises';
+import * as gtfs from '@lib/gtfs/gtfs.types';
+import * as crypto from 'node:crypto';
 
 export class RaptorCollector {
     private stops: gtfs.Stop[] = [];
@@ -28,25 +26,11 @@ export class RaptorCollector {
     };
 
     public async loadGtfs(args: LoadGtfsArgs): Promise<void> {
-        const process = <T>(stream: stream.Readable, target: Array<T>) => {
-            return new Promise<void>((resolve, reject) => {
-                stream
-                    .pipe(parse({ columns: true }))
-                    .on('data', (data) => target.push(data))
-                    .on('error', (error) => reject(error))
-                    .on('end', () => resolve());
-            });
-        };
-
-        const promises: Promise<void>[] = [];
-
-        args.stops.map((stream) => promises.push(process(stream, this.stops)));
-        args.stopTimes.map((stream) => promises.push(process(stream, this.stopTimes)));
-        args.trips.map((stream) => promises.push(process(stream, this.trips)));
-        args.calendars.map((stream) => promises.push(process(stream, this.calendars)));
-        args.calendarDates.map((stream) => promises.push(process(stream, this.calendarDates)));
-
-        await Promise.all(promises);
+        this.stops = args.stops;
+        this.stopTimes = args.stopTimes;
+        this.trips = args.trips;
+        this.calendars = args.calendars;
+        this.calendarDates = args.calendarDates;
     }
 
     public buildDataset(args: BuildDatasetArgs): void {

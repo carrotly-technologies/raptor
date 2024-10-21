@@ -1,11 +1,12 @@
+import * as gtfs from '@lib/gtfs/gtfs.types';
 import * as stream from 'stream';
 
 export interface LoadGtfsArgs {
-    stops: stream.Readable[];
-    stopTimes: stream.Readable[];
-    trips: stream.Readable[];
-    calendars: stream.Readable[];
-    calendarDates: stream.Readable[];
+    stops: gtfs.Stop[];
+    stopTimes: gtfs.StopTime[];
+    trips: gtfs.Trip[];
+    calendars: gtfs.Calendar[];
+    calendarDates: gtfs.CalendarDate[];
 }
 
 export interface LoadDatasetArgs {
