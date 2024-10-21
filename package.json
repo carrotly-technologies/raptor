@@ -1,6 +1,6 @@
 {
   "name": "@carrotly-technologies/raptor",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Round-Based Public Transit Routing",
   "author": "Carrotly Technologies <contact@carrotly.tech>",
   "repository": {
